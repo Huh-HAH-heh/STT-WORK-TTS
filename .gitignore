@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+.build-venv/
 venv/
 dist/
 build/
@@ -14,14 +15,21 @@ build/
 .env.*
 !.env.example
 
-# Local model weights and runtime data
-models/
+# Large model files are downloaded by the portable builder
+assets/models/*
+assets/voices/*.onnx
+assets/voices/*.onnx.json
+assets/voices/*MODEL_CARD*
+!assets/README.md
+
+# Local runtime data
 data/recordings/
 data/speech/
 data/cache/
 *.wav
 *.mp3
 *.flac
+STT-WORK-TTS-Windows-x64.zip
 
 # Editors
 .vscode/
