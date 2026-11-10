@@ -8,13 +8,16 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from ..domain import AudioClip, PipelineResult, SpeechAudio, Transcription
-from .text_processor import TextProcessor
 
 logger = logging.getLogger(__name__)
 
 
 class SpeechRecognizer(Protocol):
     def transcribe(self, clip: AudioClip) -> Transcription: ...
+
+
+class WorkProcessor(Protocol):
+    def process(self, text: str) -> tuple[str, str | None]: ...
 
 
 class SpeechSynthesizer(Protocol):
@@ -28,23 +31,23 @@ class _Job:
 
 
 class ProcessingStack:
-    """Последовательная очередь: аудио → STT → обработка текста → TTS."""
+    """Одна очередь и один worker: STT → локальные команды → TTS."""
 
     def __init__(
         self,
         recognizer: SpeechRecognizer,
-        processor: TextProcessor,
+        processor: WorkProcessor,
         synthesizer: SpeechSynthesizer,
     ) -> None:
         self._recognizer = recognizer
         self._processor = processor
         self._synthesizer = synthesizer
-        self._queue: queue.Queue[_Job | None] = queue.Queue()
+        self._queue: queue.Queue[_Job | None] = queue.Queue(maxsize=2)
         self._closed = False
         self._lock = threading.Lock()
         self._worker = threading.Thread(
             target=self._run,
-            name="speech-processing-stack",
+            name="speech-stack",
             daemon=True,
         )
         self._worker.start()
@@ -66,18 +69,10 @@ class ProcessingStack:
                 if not job.future.set_running_or_notify_cancel():
                     continue
 
-                logger.info("Этап 1/3: распознавание речи.")
                 transcription = self._recognizer.transcribe(job.clip)
-
-                warning: str | None = None
-                if transcription.text:
-                    logger.info("Этап 2/3: обработка распознанного текста.")
-                    answer, warning = self._processor.process(transcription.text)
-                else:
-                    answer = "Я не разобрал речь. Попробуйте записать фразу ещё раз."
-
-                logger.info("Этап 3/3: синтез голосового ответа.")
+                answer, warning = self._processor.process(transcription.text)
                 speech = self._synthesizer.synthesize(answer)
+
                 job.future.set_result(
                     PipelineResult(
                         transcription=transcription,
