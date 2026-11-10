@@ -13,6 +13,32 @@ class OfflineWorkProcessor:
         self._notes: list[str] = []
         self._save_notes = save_notes
         self._notes_file = notes_file
+        if self._save_notes and self._notes_file:
+            from pathlib import Path
+
+            path = Path(self._notes_file)
+            if path.is_file():
+                self._notes = [
+                    line.strip()
+                    for line in path.read_text(encoding="utf-8").splitlines()
+                    if line.strip()
+                ]
+
+    def _save(self) -> str | None:
+        if not self._save_notes or not self._notes_file:
+            return None
+        try:
+            from pathlib import Path
+
+            path = Path(self._notes_file)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if self._notes:
+                path.write_text("\\n".join(self._notes) + "\\n", encoding="utf-8")
+            else:
+                path.unlink(missing_ok=True)
+            return None
+        except OSError as exc:
+            return f"Не удалось сохранить заметки: {exc}"
 
     def process(self, text: str) -> tuple[str, str | None]:
         command = text.strip()
@@ -73,7 +99,8 @@ class OfflineWorkProcessor:
 
         if any(phrase in normalized for phrase in ("очисти заметки", "удали заметки")):
             self._notes.clear()
-            return "Список заметок очищен.", None
+            warning = self._save()
+            return "Список заметок очищен.", warning
 
         calculation = self._try_calculation(normalized)
         if calculation is not None:
