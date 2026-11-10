@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+
+# Local settings and secrets
+.env
+.env.*
+!.env.example
+
+# Local model weights and runtime data
+models/
+data/recordings/
+data/speech/
+data/cache/
+*.wav
+*.mp3
+*.flac
+
+# Editors
+.vscode/
+.idea/
