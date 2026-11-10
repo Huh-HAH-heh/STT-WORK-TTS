@@ -80,7 +80,7 @@ try {
     Remove-Item (Join-Path $Root "build") -Recurse -Force -ErrorAction SilentlyContinue
     Remove-Item (Join-Path $Root "dist\STTWorkTTS") -Recurse -Force -ErrorAction SilentlyContinue
 
-    & $Python -m PyInstaller --noconfirm --clean --onedir --name STTWorkTTS --paths src --collect-all vosk --collect-all piper --collect-all onnxruntime --collect-all sounddevice --collect-all _cffi_backend run_app.py
+    & $Python -m PyInstaller --noconfirm --clean --onedir --name STTWorkTTS --paths src --collect-all vosk --collect-all piper --collect-all onnxruntime --collect-all sounddevice --collect-all _sounddevice_data --collect-all _cffi_backend run_app.py
     if ($LASTEXITCODE -ne 0) { throw "PyInstaller build failed." }
 
     $PortableDir = Join-Path $Root "dist\STTWorkTTS"
