@@ -32,9 +32,15 @@ class PiperSynthesizer:
 
         config_path = Path(f"{model_path}.json")
         if not model_path.is_file() or not config_path.is_file():
+            if self._settings.voice == "female":
+                raise FileNotFoundError(
+                    "Женская модель не входит в базовый архив. "
+                    "Укажи в config.toml путь к женской Piper ONNX-модели "
+                    "с подтверждёнными правами на распространение."
+                )
             raise FileNotFoundError(
-                f"Не найдена голосовая модель Piper: {model_path}. "
-                "В готовом архиве модели уже должны находиться в assets/voices."
+                f"Не найдена встроенная мужская модель Piper: {model_path}. "
+                "Проверь целостность portable-архива."
             )
 
         try:
