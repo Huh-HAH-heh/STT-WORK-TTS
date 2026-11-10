@@ -29,6 +29,7 @@ class WorkSettings:
 @dataclass(frozen=True, slots=True)
 class TTSSettings:
     voice: str = "female"
+    cpu_threads: int = 1
     female_model: Path = Path("assets/voices/ru_RU-irina-medium.onnx")
     male_model: Path = Path("assets/voices/ru_RU-denis-medium.onnx")
     play_audio: bool = True
@@ -91,6 +92,7 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
         ),
         tts=TTSSettings(
             voice=str(tts.get("voice", "female")).lower(),
+            cpu_threads=max(1, min(4, int(tts.get("cpu_threads", 1)))),
             female_model=Path(tts.get(
                 "female_model", "assets/voices/ru_RU-irina-medium.onnx"
             )),
