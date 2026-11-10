@@ -49,8 +49,9 @@ try {
         Remove-Item $ModelZip -Force
     }
 
+    # Bundle one redistributable default voice to reduce archive size.
+    # Female models remain supported as a user-supplied optional asset.
     $VoiceModels = @(
-        @{ Name = "irina"; File = "ru_RU-irina-medium" },
         @{ Name = "denis"; File = "ru_RU-denis-medium" }
     )
 
