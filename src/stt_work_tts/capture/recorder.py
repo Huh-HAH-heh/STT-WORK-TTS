@@ -1,15 +1,13 @@
 from __future__ import annotations
 
+import audioop
 import logging
 import threading
+import wave
 from datetime import datetime
-from math import gcd
 from pathlib import Path
 
-import numpy as np
 import sounddevice as sd
-import soundfile as sf
-from scipy.signal import resample_poly
 
 from ..config import AudioSettings
 from ..domain import AudioClip
@@ -18,16 +16,16 @@ logger = logging.getLogger(__name__)
 
 
 class MicrophoneRecorder:
-    """Записывает mono float32 в RAM; WAV создаётся только по настройке."""
+    """Минимальный захват PCM16 mono. На диск пишет только по явной настройке."""
 
     def __init__(self, settings: AudioSettings) -> None:
         self._settings = settings
         self._lock = threading.Lock()
-        self._chunks: list[np.ndarray] = []
-        self._frames = 0
+        self._chunks: list[bytes] = []
+        self._byte_count = 0
+        self._max_bytes = settings.sample_rate * settings.max_recording_seconds * 2
         self._capture_rate = settings.sample_rate
-        self._max_frames = settings.sample_rate * settings.max_recording_seconds
-        self._stream: sd.InputStream | None = None
+        self._stream: sd.RawInputStream | None = None
         self._active = False
         self.limit_reached = False
 
@@ -41,8 +39,8 @@ class MicrophoneRecorder:
         try:
             sd.check_input_settings(
                 samplerate=requested,
-                channels=self._settings.channels,
-                dtype="float32",
+                channels=1,
+                dtype="int16",
             )
             return requested
         except (sd.PortAudioError, ValueError):
@@ -50,36 +48,34 @@ class MicrophoneRecorder:
             fallback = int(round(float(device["default_samplerate"])))
             sd.check_input_settings(
                 samplerate=fallback,
-                channels=self._settings.channels,
-                dtype="float32",
+                channels=1,
+                dtype="int16",
             )
-            logger.warning(
-                "Микрофон не поддерживает %s Гц; запись пойдёт на %s Гц "
-                "с последующим приведением к %s Гц.",
-                requested,
+            logger.info(
+                "Микрофон использует %s Гц; аудио будет приведено к %s Гц.",
                 fallback,
                 requested,
             )
             return fallback
 
     def start(self) -> None:
-        with self._lock:
-            if self._stream is not None:
-                raise RuntimeError("Запись уже запущена.")
+        if self._stream is not None:
+            raise RuntimeError("Запись уже запущена.")
 
         capture_rate = self._resolve_capture_rate()
         with self._lock:
             self._chunks.clear()
-            self._frames = 0
+            self._byte_count = 0
             self._capture_rate = capture_rate
-            self._max_frames = capture_rate * self._settings.max_recording_seconds
+            self._max_bytes = capture_rate * self._settings.max_recording_seconds * 2
             self._active = True
             self.limit_reached = False
 
-        stream = sd.InputStream(
+        stream = sd.RawInputStream(
             samplerate=capture_rate,
-            channels=self._settings.channels,
-            dtype="float32",
+            channels=1,
+            dtype="int16",
+            blocksize=4096,
             callback=self._on_audio,
         )
         try:
@@ -93,7 +89,7 @@ class MicrophoneRecorder:
 
     def _on_audio(
         self,
-        indata: np.ndarray,
+        indata: object,
         frames: int,
         time_info: object,
         status: sd.CallbackFlags,
@@ -102,17 +98,18 @@ class MicrophoneRecorder:
         if status:
             logger.warning("Состояние аудиопотока: %s", status)
 
+        raw = bytes(indata)
         with self._lock:
             if not self._active:
                 raise sd.CallbackStop
 
-            remaining = self._max_frames - self._frames
-            accepted = min(frames, remaining)
+            remaining = self._max_bytes - self._byte_count
+            accepted = min(len(raw), remaining)
             if accepted > 0:
-                self._chunks.append(indata[:accepted, 0].copy())
-                self._frames += accepted
+                self._chunks.append(raw[:accepted])
+                self._byte_count += accepted
 
-            if self._frames >= self._max_frames:
+            if self._byte_count >= self._max_bytes:
                 self.limit_reached = True
                 self._active = False
                 raise sd.CallbackStop
@@ -133,29 +130,33 @@ class MicrophoneRecorder:
             self._active = False
             if not self._chunks:
                 raise ValueError("Микрофон не передал аудиоданные.")
-            samples = np.concatenate(self._chunks).astype(np.float32, copy=False)
+            pcm16 = b"".join(self._chunks)
             self._chunks.clear()
-            self._frames = 0
+            self._byte_count = 0
             capture_rate = self._capture_rate
 
         target_rate = self._settings.sample_rate
         if capture_rate != target_rate:
-            divisor = gcd(capture_rate, target_rate)
-            samples = resample_poly(
-                samples,
-                up=target_rate // divisor,
-                down=capture_rate // divisor,
-            ).astype(np.float32, copy=False)
+            try:
+                pcm16, _ = audioop.ratecv(
+                    pcm16, 2, 1, capture_rate, target_rate, None
+                )
+            except Exception as exc:
+                raise RuntimeError(f"Не удалось изменить частоту аудио: {exc}") from exc
 
         saved_path: Path | None = None
         if self._settings.save_recordings:
             self._settings.recording_dir.mkdir(parents=True, exist_ok=True)
             filename = datetime.now().strftime("recording_%Y%m%d_%H%M%S.wav")
             saved_path = self._settings.recording_dir / filename
-            sf.write(saved_path, samples, target_rate)
+            with wave.open(str(saved_path), "wb") as wav_file:
+                wav_file.setnchannels(1)
+                wav_file.setsampwidth(2)
+                wav_file.setframerate(target_rate)
+                wav_file.writeframes(pcm16)
 
         return AudioClip.create(
-            samples=samples,
+            pcm16=pcm16,
             sample_rate=target_rate,
             saved_path=saved_path,
         )
