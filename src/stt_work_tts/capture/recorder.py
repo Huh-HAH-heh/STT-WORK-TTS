@@ -124,7 +124,8 @@ class MicrophoneRecorder:
 
         self._stream = None
         try:
-            stream.stop()
+            if stream.active:
+                stream.stop()
         finally:
             stream.close()
 
