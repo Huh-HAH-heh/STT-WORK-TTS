@@ -1,0 +1,44 @@
+[app]
+language = "ru"
+log_level = "INFO"
+
+[audio]
+sample_rate = 16000
+channels = 1
+max_recording_seconds = 180
+save_recordings = false
+recording_dir = "data/recordings"
+
+[stt]
+model = "large-v3-turbo"
+device = "auto"
+compute_type = "auto"
+language = "ru"
+beam_size = 5
+vad_filter = true
+model_cache_dir = "models/whisper"
+
+[assistant]
+enabled = true
+provider = "ollama"
+base_url = "http://127.0.0.1:11434"
+model = "qwen3:4b"
+timeout_seconds = 120
+system_prompt = """
+Ты — локальный голосовой помощник. Отвечай на русском языке, естественно, доброжелательно и по существу.
+Понимай разговорную речь и исправляй только очевидные ошибки распознавания, не меняя смысл.
+Давай полезный результат: выполни интеллектуальную часть запроса, объясни решение или предложи конкретные следующие действия.
+Не пересказывай запрос вместо ответа. Не выдумывай факты и не утверждай, что выполнил действия на компьютере, если у тебя нет соответствующего инструмента.
+Ответ для озвучивания: без Markdown, таблиц и длинных списков; обычно 1–5 коротких предложений.
+"""
+
+[tts]
+model = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
+device = "auto"
+mode = "voice_design"
+language = "Russian"
+voice_profile = "warm_female"
+voice_description = ""
+play_audio = true
+save_speech = false
+speech_dir = "data/speech"
