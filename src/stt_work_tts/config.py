@@ -9,44 +9,28 @@ from typing import Any
 @dataclass(frozen=True, slots=True)
 class AudioSettings:
     sample_rate: int = 16_000
-    channels: int = 1
-    max_recording_seconds: int = 180
+    max_recording_seconds: int = 90
     save_recordings: bool = False
     recording_dir: Path = Path("data/recordings")
 
 
 @dataclass(frozen=True, slots=True)
 class STTSettings:
-    model: str = "large-v3-turbo"
-    device: str = "auto"
-    compute_type: str = "auto"
-    language: str = "ru"
-    beam_size: int = 5
-    vad_filter: bool = True
-    model_cache_dir: Path = Path("models/whisper")
+    model_dir: Path = Path("assets/models/vosk-model-small-ru-0.22")
+    sample_rate: int = 16_000
 
 
 @dataclass(frozen=True, slots=True)
-class AssistantSettings:
-    enabled: bool = True
-    provider: str = "ollama"
-    base_url: str = "http://127.0.0.1:11434"
-    model: str = "qwen3:4b"
-    timeout_seconds: int = 120
-    system_prompt: str = (
-        "Ты — локальный голосовой помощник. Отвечай по-русски, кратко и по существу. "
-        "Давай полезный результат, не пересказывай запрос."
-    )
+class WorkSettings:
+    notes_file: Path = Path("data/notes.txt")
+    save_notes: bool = False
 
 
 @dataclass(frozen=True, slots=True)
 class TTSSettings:
-    model: str = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
-    device: str = "auto"
-    mode: str = "voice_design"
-    language: str = "Russian"
-    voice_profile: str = "warm_female"
-    voice_description: str = ""
+    voice: str = "female"
+    female_model: Path = Path("assets/voices/ru_RU-irina-medium.onnx")
+    male_model: Path = Path("assets/voices/ru_RU-denis-medium.onnx")
     play_audio: bool = True
     save_speech: bool = False
     speech_dir: Path = Path("data/speech")
@@ -54,7 +38,6 @@ class TTSSettings:
 
 @dataclass(frozen=True, slots=True)
 class AppSettings:
-    language: str = "ru"
     log_level: str = "INFO"
 
 
@@ -63,7 +46,7 @@ class AppConfig:
     app: AppSettings
     audio: AudioSettings
     stt: STTSettings
-    assistant: AssistantSettings
+    work: WorkSettings
     tts: TTSSettings
 
 
@@ -78,7 +61,7 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
     config_path = Path(path)
     if not config_path.is_file():
         raise FileNotFoundError(
-            f"Не найден {config_path}. Запустите приложение из корня проекта."
+            f"Не найден {config_path}. Запустите STT Work TTS из папки с config.toml."
         )
 
     with config_path.open("rb") as stream:
@@ -87,58 +70,44 @@ def load_config(path: str | Path = "config.toml") -> AppConfig:
     app = _section(raw, "app")
     audio = _section(raw, "audio")
     stt = _section(raw, "stt")
-    assistant = _section(raw, "assistant")
+    work = _section(raw, "work")
     tts = _section(raw, "tts")
 
     result = AppConfig(
-        app=AppSettings(
-            language=str(app.get("language", "ru")),
-            log_level=str(app.get("log_level", "INFO")).upper(),
-        ),
+        app=AppSettings(log_level=str(app.get("log_level", "INFO")).upper()),
         audio=AudioSettings(
             sample_rate=int(audio.get("sample_rate", 16_000)),
-            channels=int(audio.get("channels", 1)),
-            max_recording_seconds=int(audio.get("max_recording_seconds", 180)),
+            max_recording_seconds=int(audio.get("max_recording_seconds", 90)),
             save_recordings=bool(audio.get("save_recordings", False)),
             recording_dir=Path(audio.get("recording_dir", "data/recordings")),
         ),
         stt=STTSettings(
-            model=str(stt.get("model", "large-v3-turbo")),
-            device=str(stt.get("device", "auto")),
-            compute_type=str(stt.get("compute_type", "auto")),
-            language=str(stt.get("language", "ru")),
-            beam_size=int(stt.get("beam_size", 5)),
-            vad_filter=bool(stt.get("vad_filter", True)),
-            model_cache_dir=Path(stt.get("model_cache_dir", "models/whisper")),
+            model_dir=Path(stt.get("model_dir", "assets/models/vosk-model-small-ru-0.22")),
+            sample_rate=int(stt.get("sample_rate", 16_000)),
         ),
-        assistant=AssistantSettings(
-            enabled=bool(assistant.get("enabled", True)),
-            provider=str(assistant.get("provider", "ollama")).lower(),
-            base_url=str(assistant.get("base_url", "http://127.0.0.1:11434")).rstrip("/"),
-            model=str(assistant.get("model", "qwen3:4b")),
-            timeout_seconds=int(assistant.get("timeout_seconds", 120)),
-            system_prompt=str(assistant.get("system_prompt", "")),
+        work=WorkSettings(
+            notes_file=Path(work.get("notes_file", "data/notes.txt")),
+            save_notes=bool(work.get("save_notes", False)),
         ),
         tts=TTSSettings(
-            model=str(tts.get("model", "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign")),
-            device=str(tts.get("device", "auto")),
-            mode=str(tts.get("mode", "voice_design")).lower(),
-            language=str(tts.get("language", "Russian")),
-            voice_profile=str(tts.get("voice_profile", "warm_female")).lower(),
-            voice_description=str(tts.get("voice_description", "")),
+            voice=str(tts.get("voice", "female")).lower(),
+            female_model=Path(tts.get(
+                "female_model", "assets/voices/ru_RU-irina-medium.onnx"
+            )),
+            male_model=Path(tts.get(
+                "male_model", "assets/voices/ru_RU-denis-medium.onnx"
+            )),
             play_audio=bool(tts.get("play_audio", True)),
             save_speech=bool(tts.get("save_speech", False)),
             speech_dir=Path(tts.get("speech_dir", "data/speech")),
         ),
     )
 
-    if result.audio.sample_rate <= 0 or result.audio.channels != 1:
-        raise ValueError("Для первой версии требуется положительная частота и один канал.")
+    if result.audio.sample_rate != 16_000 or result.stt.sample_rate != 16_000:
+        raise ValueError("Для встроенной лёгкой модели Vosk требуется 16 кГц.")
     if result.audio.max_recording_seconds <= 0:
         raise ValueError("audio.max_recording_seconds должен быть больше нуля.")
-    if result.tts.mode not in {"voice_design", "custom_voice"}:
-        raise ValueError("tts.mode должен быть voice_design или custom_voice.")
-    if result.assistant.provider not in {"ollama", "passthrough"}:
-        raise ValueError("assistant.provider должен быть ollama или passthrough.")
+    if result.tts.voice not in {"female", "male"}:
+        raise ValueError("tts.voice должен быть female или male.")
 
     return result
