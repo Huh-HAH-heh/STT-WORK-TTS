@@ -1,29 +1,28 @@
 # Third-party notices
 
-This project packages third-party offline speech engines and model files.
-
 ## Vosk
 
 - Runtime: Vosk API, Apache License 2.0.
 - Russian model: vosk-model-small-ru-0.22.
 - Source: https://alphacephei.com/vosk/models
-- Preserve the license and provenance notices supplied with the upstream model archive.
+- Preserve upstream provenance and license notices.
 
 ## Piper
 
 - Runtime: Piper TTS 1.8.0, GPL-3.0-or-later.
 - Source: https://github.com/OHF-Voice/piper1-gpl
-- A portable distribution must include the corresponding license and comply with the Piper runtime license.
+- A distributed portable archive must comply with the Piper runtime license and include applicable license/source information. Review the project's own licensing before redistributing a combined application.
 
-## Russian Piper voices
+## Included Russian voice
 
-The build script downloads original voice files and model cards from the versioned rhasspy/piper-voices v1.0.0 repository.
+- ru_RU-denis-medium.
+- Its upstream model card identifies the OHF-Voice voice-datasets training data as CC0.
+- Voice models and base checkpoints have their own terms; review the upstream model card and provenance before commercial redistribution.
 
-- ru_RU-denis-medium: model card identifies the OHF-Voice voice dataset as CC0.
-- ru_RU-irina-medium: model card reports the RHVoice dataset license as "Unknown".
+## Optional female voice
 
-The female Irina model is included for local evaluation because it provides the requested female voice option. Its dataset rights are not established by the upstream model card. Do not redistribute that model or use it commercially until its rights have been independently confirmed. The build archive is intended for personal/local evaluation.
+The code supports a user-supplied Russian female Piper ONNX model through tts.female_model. The commonly listed ru_RU-irina-medium model is deliberately NOT bundled by the portable builder because its official model card lists the RHVoice dataset license as "Unknown". Obtain a model with clear redistribution rights before adding it to a public archive.
 
 ## Python dependencies
 
-The portable archive bundles Python runtime dependencies. Their original license files should be retained by PyInstaller in the distribution folder. Review the licenses of all bundled packages before redistributing a modified application.
+The portable archive bundles Python runtime dependencies, including sounddevice and ONNX Runtime. Retain their original license notices in the distribution and review all dependency licenses before redistribution.
