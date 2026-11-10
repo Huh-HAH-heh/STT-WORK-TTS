@@ -33,7 +33,7 @@ class OfflineWorkProcessor:
             path = Path(self._notes_file)
             path.parent.mkdir(parents=True, exist_ok=True)
             if self._notes:
-                path.write_text("\\n".join(self._notes) + "\\n", encoding="utf-8")
+                path.write_text("\n".join(self._notes) + "\n", encoding="utf-8")
             else:
                 path.unlink(missing_ok=True)
             return None
@@ -77,16 +77,7 @@ class OfflineWorkProcessor:
             if not note:
                 return "Не расслышала текст заметки.", None
             self._notes.append(note)
-            warning = None
-            if self._save_notes and self._notes_file:
-                try:
-                    from pathlib import Path
-
-                    path = Path(self._notes_file)
-                    path.parent.mkdir(parents=True, exist_ok=True)
-                    path.write_text("\n".join(self._notes) + "\n", encoding="utf-8")
-                except OSError as exc:
-                    warning = f"Заметка осталась в памяти, но её не удалось записать на диск: {exc}"
+            warning = self._save()
             return "Хорошо, запомнила эту заметку.", warning
 
         if any(phrase in normalized for phrase in ("покажи заметки", "прочитай заметки", "список заметок")):
