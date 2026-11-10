@@ -28,7 +28,7 @@ class WorkSettings:
 
 @dataclass(frozen=True, slots=True)
 class TTSSettings:
-    voice: str = "female"
+    voice: str = "male"
     cpu_threads: int = 1
     female_model: Path = Path("assets/voices/ru_RU-irina-medium.onnx")
     male_model: Path = Path("assets/voices/ru_RU-denis-medium.onnx")
