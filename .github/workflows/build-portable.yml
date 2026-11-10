@@ -1,0 +1,36 @@
+name: Build offline Windows archive
+
+on:
+  push:
+    branches:
+      - feature/lightweight-offline
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-portable:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12 x64
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          architecture: "x64"
+
+      - name: Build self-contained archive
+        shell: powershell
+        run: .\build_portable.ps1 -Clean
+
+      - name: Upload portable ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: STT-WORK-TTS-Windows-x64
+          path: STT-WORK-TTS-Windows-x64.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
