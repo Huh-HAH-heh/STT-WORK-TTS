@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: offline-build-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-portable:
     runs-on: windows-latest
@@ -33,4 +37,4 @@ jobs:
           path: STT-WORK-TTS-Windows-x64.zip
           if-no-files-found: error
           compression-level: 0
-          retention-days: 30
+          retention-days: 90
