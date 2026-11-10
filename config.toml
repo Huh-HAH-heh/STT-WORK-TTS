@@ -17,7 +17,7 @@ notes_file = "data/notes.txt"
 save_notes = false
 
 [tts]
-voice = "female"
+voice = "male"
 cpu_threads = 1
 female_model = "assets/voices/ru_RU-irina-medium.onnx"
 male_model = "assets/voices/ru_RU-denis-medium.onnx"
