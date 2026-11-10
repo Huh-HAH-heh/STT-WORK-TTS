@@ -4,39 +4,33 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-import numpy as np
-from numpy.typing import NDArray
-
-FloatAudio = NDArray[np.float32]
-
 
 @dataclass(slots=True)
 class AudioClip:
-    """Одноканальная запись с микрофона, находящаяся в оперативной памяти."""
+    """Запись PCM16 mono, хранящаяся в оперативной памяти."""
 
-    samples: FloatAudio
+    pcm16: bytes
     sample_rate: int
     captured_at: datetime
     saved_path: Path | None = None
 
     @property
     def duration_seconds(self) -> float:
-        return len(self.samples) / self.sample_rate
+        return len(self.pcm16) / (self.sample_rate * 2)
 
     @classmethod
     def create(
         cls,
-        samples: NDArray[np.floating],
+        pcm16: bytes,
         sample_rate: int,
         saved_path: Path | None = None,
     ) -> AudioClip:
-        data = np.asarray(samples, dtype=np.float32).reshape(-1)
-        if data.size == 0:
+        if not pcm16:
             raise ValueError("Запись пустая.")
-        if not np.isfinite(data).all():
-            raise ValueError("В записи обнаружены некорректные значения.")
+        if len(pcm16) % 2:
+            raise ValueError("Повреждён PCM16 буфер: нечётное число байтов.")
         return cls(
-            samples=np.ascontiguousarray(data),
+            pcm16=pcm16,
             sample_rate=sample_rate,
             captured_at=datetime.now(timezone.utc),
             saved_path=saved_path,
@@ -46,13 +40,13 @@ class AudioClip:
 @dataclass(frozen=True, slots=True)
 class Transcription:
     text: str
-    language: str
-    language_probability: float
+    language: str = "ru"
+    language_probability: float = 1.0
 
 
 @dataclass(slots=True)
 class SpeechAudio:
-    samples: FloatAudio
+    pcm16: bytes
     sample_rate: int
 
 
