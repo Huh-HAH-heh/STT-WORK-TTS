@@ -18,6 +18,7 @@ save_notes = false
 
 [tts]
 voice = "female"
+cpu_threads = 1
 female_model = "assets/voices/ru_RU-irina-medium.onnx"
 male_model = "assets/voices/ru_RU-denis-medium.onnx"
 play_audio = true
