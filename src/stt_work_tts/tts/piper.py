@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
@@ -10,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class PiperSynthesizer:
-    """Локальная нейросетевая озвучка ONNX-моделью на CPU."""
+    """Локальная нейросетевая озвучка ONNX-моделью с ограниченным числом CPU-потоков."""
 
     def __init__(self, settings: TTSSettings) -> None:
         self._settings = settings
@@ -37,14 +38,33 @@ class PiperSynthesizer:
             )
 
         try:
-            from piper import PiperVoice
+            import onnxruntime as ort
+            from piper.config import PiperConfig
+            from piper.voice import PiperVoice
         except ImportError as exc:
             raise RuntimeError(
-                "Не найден Piper TTS. Запустите приложение из portable-архива."
+                "Не найден Piper TTS или ONNX Runtime. Запустите portable-архив."
             ) from exc
 
-        logger.info("Загрузка голоса Piper: %s", self._settings.voice)
-        self._voice = PiperVoice.load(str(model_path), use_cuda=False)
+        logger.info(
+            "Загрузка голоса Piper: %s (CPU-потоки: %s)",
+            self._settings.voice,
+            self._settings.cpu_threads,
+        )
+        config_data = json.loads(config_path.read_text(encoding="utf-8"))
+        voice_config = PiperConfig.from_dict(config_data)
+
+        options = ort.SessionOptions()
+        options.intra_op_num_threads = self._settings.cpu_threads
+        options.inter_op_num_threads = 1
+        options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+
+        session = ort.InferenceSession(
+            str(model_path),
+            sess_options=options,
+            providers=["CPUExecutionProvider"],
+        )
+        self._voice = PiperVoice(config=voice_config, session=session)
         self._loaded_path = model_path
         logger.info("Голос Piper готов.")
 
