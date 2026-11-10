@@ -45,7 +45,7 @@ class OfflineWorkProcessor:
         normalized = command.casefold().replace("ё", "е")
 
         if not normalized:
-            return "Я не расслышала команду. Повторите, пожалуйста.", None
+            return "Не удалось распознать команду. Повтори, пожалуйста.", None
 
         if any(word in normalized for word in ("помощь", "что ты умеешь", "список команд")):
             return (
@@ -78,7 +78,7 @@ class OfflineWorkProcessor:
                 return "Не расслышала текст заметки.", None
             self._notes.append(note)
             warning = self._save()
-            return "Хорошо, запомнила эту заметку.", warning
+            return "Хорошо, заметка добавлена.", warning
 
         if any(phrase in normalized for phrase in ("покажи заметки", "прочитай заметки", "список заметок")):
             if not self._notes:
