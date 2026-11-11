@@ -30,7 +30,7 @@ function New-PythonEnvironment {
 
 function Install-PiperAssets {
     $PiperRoot = Join-Path $AssetsRoot "piper"
-    $VoiceRoot = Join-Path $AssetsRoot "voices"
+    $VoiceRoot = Join-Path $ModelRoot "piper"
     $TempRoot = Join-Path $LabRoot "tmp\piper"
     New-Item -ItemType Directory -Force -Path $PiperRoot, $VoiceRoot, $TempRoot | Out-Null
 
