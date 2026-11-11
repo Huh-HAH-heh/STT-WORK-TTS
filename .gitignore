@@ -1,22 +1,26 @@
-# Python
+# .NET
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+TestResults/
+publish/
+dist/
+build/
+
+# Python legacy files / tools
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
 .build-venv/
-venv/
-dist/
-build/
 .pytest_cache/
 .ruff_cache/
 
-# Local settings and secrets
-.env
-.env.*
-!.env.example
-
-# Large model files are downloaded by the portable builder
+# Downloaded model and runtime assets (created by build_portable.ps1)
 assets/models/*
+assets/piper/*
 assets/voices/*.onnx
 assets/voices/*.onnx.json
 assets/voices/*MODEL_CARD*
@@ -25,7 +29,7 @@ assets/voices/*MODEL_CARD*
 # Local runtime data
 data/recordings/
 data/speech/
-data/cache/
+data/notes.txt
 *.wav
 *.mp3
 *.flac

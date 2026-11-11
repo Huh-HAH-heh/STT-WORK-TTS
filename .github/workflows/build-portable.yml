@@ -1,16 +1,16 @@
-name: Build offline Windows archive
+name: Build C# offline Windows archive
 
 on:
   push:
     branches:
-      - feature/lightweight-offline
+      - feature/csharp-rewrite
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: offline-build-${{ github.ref }}
+  group: csharp-offline-build-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -20,11 +20,10 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12 x64
-        uses: actions/setup-python@v5
+      - name: Set up .NET 10 SDK
+        uses: actions/setup-dotnet@v4
         with:
-          python-version: "3.12"
-          architecture: "x64"
+          dotnet-version: "10.0.x"
 
       - name: Build self-contained archive
         shell: powershell

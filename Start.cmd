@@ -1,12 +1,19 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-if not exist "%~dp0STTWorkTTS.exe" (
-    echo STTWorkTTS.exe was not found. This is the source folder, not a portable build.
-    echo Run build_portable.ps1 on a computer with internet access to create the offline ZIP.
-    pause
-    exit /b 1
+
+if exist "%~dp0STT.WorkTTS.exe" (
+    "%~dp0STT.WorkTTS.exe" %*
+    goto :end
 )
-"%~dp0STTWorkTTS.exe"
+
+if exist "%~dp0dist\STTWorkTTS\STT.WorkTTS.exe" (
+    "%~dp0dist\STTWorkTTS\STT.WorkTTS.exe" %*
+    goto :end
+)
+
+echo Portable build not found. Starting the project from source...
+dotnet run --project "%~dp0src\STT.WorkTTS\STT.WorkTTS.csproj" -c Release -- %*
+:end
 if errorlevel 1 pause
 endlocal
