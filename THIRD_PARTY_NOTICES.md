@@ -1,7 +1,7 @@
 # Third-party notices
 
 ## Vosk
-- Package: Vosk .NET 0.3.75.
+- Package: Vosk .NET 0.3.38.
 - License: Apache License 2.0.
 - Source: https://github.com/alphacep/vosk-api
 - Russian model: vosk-model-small-ru-0.22. Keep the upstream model notices when redistributing.
