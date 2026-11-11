@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param([ValidateSet("all", "piper", "xvibe", "silero", "vosk", "xtts")][string]$Engine = "all")
 
 $ErrorActionPreference = "Stop"
