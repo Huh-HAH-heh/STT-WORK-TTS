@@ -32,7 +32,7 @@ function Add-Case {
 function Invoke-PiperVoice {
     param([string]$Voice)
     $Exe = Join-Path $Root "assets\piper\piper.exe"
-    $Model = Join-Path $Root "assets\voices\ru_RU-$Voice-medium.onnx"
+    $Model = Join-Path $LabRoot "models\piper\ru_RU-$Voice-medium.onnx"
     $Output = Join-Path $SessionDir "Piper_$Voice.wav"
     if (-not (Test-Path $Exe) -or -not (Test-Path $Model) -or -not (Test-Path "$Model.json")) {
         $Failures.Add("Piper " + $Voice + ": файлы не найдены. Запусти Install-TtsLab.ps1 -Engine piper.")
@@ -42,7 +42,6 @@ function Invoke-PiperVoice {
         $Info = New-Object System.Diagnostics.ProcessStartInfo
         $Info.FileName = $Exe
         $Q = [char]34
-        $Info.Arguments = "--model $Q$Model$Q --output_file $Q$Output$Q"
         $Info.WorkingDirectory = Split-Path $Exe -Parent
         $Info.UseShellExecute = $false
         $Info.CreateNoWindow = $true
@@ -154,7 +153,7 @@ foreach ($Case in $Cases) {
     Write-Host $Case.Path
     if (-not $NoPlayback) {
         try {
-            $Player = New-Object System.Media.SoundPlayer($Case.Path)
+            $Player = [System.Media.SoundPlayer]::new($Case.Path)
             $Player.Load()
             $Player.PlaySync()
             $Player.Dispose()
