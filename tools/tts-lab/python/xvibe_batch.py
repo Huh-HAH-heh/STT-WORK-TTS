@@ -11,6 +11,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--text", required=True)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--reference-wav", type=Path)
     parser.add_argument("--voices", nargs="+", default=[
         "male_deep", "female_silky", "male_authoritative"
     ])
@@ -22,6 +23,14 @@ def main() -> int:
         audio = tts.generate(args.text, voice=voice)
         output = args.output_dir / f"xVibe_{voice}.wav"
         sf.write(str(output), audio.detach().cpu().numpy(), tts.sample_rate)
+        print(f"Создано: {output}")
+
+    if args.reference_wav:
+        if not args.reference_wav.is_file():
+            raise FileNotFoundError(f"Не найден WAV-образец: {args.reference_wav}")
+        audio = tts.generate(args.text, voice=str(args.reference_wav))
+        output = args.output_dir / "xVibe_clone.wav"
+        sf.write(str(output), audio.numpy(), tts.sample_rate)
         print(f"Создано: {output}")
     return 0
 
