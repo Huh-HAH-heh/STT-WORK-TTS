@@ -10,7 +10,7 @@
 | xVibePocketTTS | male_deep, female_silky, male_authoritative | CPU, клонирование по WAV |
 | Silero v5.6 | Aidar, Baya, Kseniya, Xenia, Eugene | CPU |
 | Vosk-TTS 0.9 | speaker 0–4 | CPU |
-| XTTS-v2 | Ana Florence, Andrew Chipper | CPU, мультиязычный синтез |
+| XTTS-v2 | Ana Florence, Andrew Chipper | CPU, мультиязычный синтез (встроенные speaker embeddings, не русские исходные голоса) |
 
 Итого — до 19 вариантов. XTTS включается только после отдельного подтверждения условий лицензии.
 
@@ -75,7 +75,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\tts-lab\Run-TtsLab.ps1 -Text "�
 - XTTS-v2: Coqui Public Model License разрешает некоммерческое использование модели и её аудиовыхода. Для коммерческого проекта этот кандидат нельзя считать свободным без получения иных прав.
 - Piper: runtime распространяется под GPL-3.0-or-later; отдельные ONNX-голоса имеют собственные model cards. В лабораторию модели не коммитятся.
 
-Модели не включаются в Git и не копируются в основной portable ZIP.
+Дополнительные Piper-модели хранятся в tools/tts-lab/models/piper, остальные — в tools/tts-lab/models и локальных кэшах. Они не включаются в Git и не копируются в основной portable ZIP. Piper runtime использует общий assets/piper, который уже нужен базовому приложению.
 
 ## Что фиксировать при сравнении
 
