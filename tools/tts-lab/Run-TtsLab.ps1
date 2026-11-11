@@ -44,13 +44,19 @@ function Invoke-PiperVoice {
         $Q = [char]34
         $Info.WorkingDirectory = Split-Path $Exe -Parent
         $Info.UseShellExecute = $false
+        $Info.RedirectStandardInput = $true
         $Info.CreateNoWindow = $true
-        $TextInput = Join-Path $SessionDir "Piper_$Voice.txt"
-        [System.IO.File]::WriteAllText($TextInput, $Text, (New-Object System.Text.UTF8Encoding($false)))
-        $Info.Arguments = "--model $Q$Model$Q --input_file $Q$TextInput$Q --output_file $Q$Output$Q"
+        $Info.Arguments = "--model $Q$Model$Q --output_file $Q$Output$Q"
         $Process = New-Object System.Diagnostics.Process
         $Process.StartInfo = $Info
         if (-not $Process.Start()) { throw "Не удалось запустить Piper." }
+
+        # Write UTF-8 bytes directly: console encodings on Windows may corrupt Cyrillic text.
+        $InputBytes = [System.Text.Encoding]::UTF8.GetBytes($Text + [Environment]::NewLine)
+        $InputStream = $Process.StandardInput.BaseStream
+        $InputStream.Write($InputBytes, 0, $InputBytes.Length)
+        $InputStream.Flush()
+        $Process.StandardInput.Close()
         $Process.WaitForExit()
         if ($Process.ExitCode -ne 0 -or -not (Test-Path $Output)) { throw "Piper завершился с кодом $($Process.ExitCode)." }
         Add-Case "Piper" $Voice $Output
