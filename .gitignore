@@ -38,3 +38,12 @@ STT-WORK-TTS-Windows-x64.zip
 # Editors
 .vscode/
 .idea/
+
+# Optional TTS Lab downloads and environments
+tools/tts-lab/envs/
+tools/tts-lab/vendor/
+tools/tts-lab/cache/
+tools/tts-lab/models/
+tools/tts-lab/output/
+tools/tts-lab/ratings.csv
+tools/tts-lab/tmp/

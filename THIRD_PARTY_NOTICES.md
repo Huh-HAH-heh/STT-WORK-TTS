@@ -22,5 +22,11 @@
 - SAPI is a Windows system speech API. Voices are installed separately by the user and are not bundled in this application.
 - RHVoice voice packages have their own licenses and distribution conditions: https://github.com/RHVoice/RHVoice
 
-## Silero (future optional adapter)
-- Not included in the current C# build. Review the current official model license and attribution requirements before bundling any Silero model.
+## Experimental TTS Lab
+- The optional lab under tools/tts-lab does not bundle third-party models or runtimes in Git or in the portable application archive.
+- xVibePocketTTS code: MIT. Pocket TTS base weights and other voice/data resources have separate terms; see the upstream NOTICE and model cards.
+- Silero code and model terms must be checked for the selected model family and voice before redistribution.
+- Vosk-TTS code: Apache License 2.0. The downloaded Russian model is a separate asset with its own terms.
+- XTTS-v2 weights: Coqui Public Model License (non-commercial use only, including generated audio). The lab asks for confirmation before running XTTS.
+- Piper voice ONNX files have separate model cards; the runtime is GPL-3.0-or-later.
+- Sources and setup instructions: tools/tts-lab/README.md.
