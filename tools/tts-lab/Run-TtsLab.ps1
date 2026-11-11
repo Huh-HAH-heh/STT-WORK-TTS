@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$Text = "Привет! Рад тебя слышать. Кажется, мы наконец-то нашли время спокойно поговорить. Я могу удивляться, задавать вопросы и даже немного шутить. Проверим числа: семнадцать плюс двадцать пять — сорок два. Ну что, продолжим?",
+    [string]$ReferenceWav,
     [switch]$NoPlayback
 )
 
@@ -18,6 +19,11 @@ $env:HF_HOME = Join-Path $CacheRoot "huggingface"
 $env:TORCH_HOME = Join-Path $CacheRoot "torch"
 $env:HF_HUB_CACHE = Join-Path $CacheRoot "huggingface\hub"
 $env:TRANSFORMERS_CACHE = Join-Path $CacheRoot "huggingface\transformers"
+
+if ($ReferenceWav) {
+    if (-not (Test-Path $ReferenceWav)) { throw "Не найден WAV-образец: $ReferenceWav" }
+    $ReferenceWav = (Resolve-Path $ReferenceWav).Path
+}
 
 $Cases = New-Object System.Collections.Generic.List[object]
 $Failures = New-Object System.Collections.Generic.List[string]
@@ -94,13 +100,16 @@ Write-Host ("Результаты: " + $SessionDir)
 foreach ($Voice in @("denis", "dmitri", "irina", "ruslan")) { Invoke-PiperVoice $Voice }
 
 $XvibePython = Join-Path $LabRoot "vendor\xVibePocketTTS\.venv\Scripts\python.exe"
-Invoke-PythonBatch "xvibe" $XvibePython (Join-Path $PSScriptRoot "python\xvibe_batch.py") @(
+$XvibeArgs = @(
     "--text", $Text, "--output-dir", $SessionDir, "--voices",
     "male_deep", "female_silky", "male_authoritative"
 )
+if ($ReferenceWav) { $XvibeArgs += @("--reference-wav", $ReferenceWav) }
+Invoke-PythonBatch "xvibe" $XvibePython (Join-Path $PSScriptRoot "python\xvibe_batch.py") $XvibeArgs
 foreach ($Voice in @("male_deep", "female_silky", "male_authoritative")) {
     Add-Case "xVibe" $Voice (Join-Path $SessionDir "xVibe_$Voice.wav")
 }
+if ($ReferenceWav) { Add-Case "xVibe" "cloned-reference" (Join-Path $SessionDir "xVibe_clone.wav") }
 
 $SileroPython = Join-Path $LabRoot "envs\silero\Scripts\python.exe"
 Invoke-PythonBatch "silero" $SileroPython (Join-Path $PSScriptRoot "python\silero_batch.py") @(
@@ -129,12 +138,15 @@ if (Test-Path $XttsPython) {
 if ($RunXtts) {
     $env:COQUI_TOS_AGREED = "1"
     $env:TTS_HOME = Join-Path $CacheRoot "xtts"
-    Invoke-PythonBatch "xtts" $XttsPython (Join-Path $PSScriptRoot "python\xtts_batch.py") @(
+    $XttsArgs = @(
         "--text", $Text, "--output-dir", $SessionDir, "--voices",
         "Ana Florence", "Andrew Chipper"
     )
+    if ($ReferenceWav) { $XttsArgs += @("--speaker-wav", $ReferenceWav) }
+    Invoke-PythonBatch "xtts" $XttsPython (Join-Path $PSScriptRoot "python\xtts_batch.py") $XttsArgs
     Add-Case "XTTS-v2" "Ana Florence" (Join-Path $SessionDir "XTTS_Ana_Florence.wav")
     Add-Case "XTTS-v2" "Andrew Chipper" (Join-Path $SessionDir "XTTS_Andrew_Chipper.wav")
+    if ($ReferenceWav) { Add-Case "XTTS-v2" "cloned-reference" (Join-Path $SessionDir "XTTS_Cloned.wav") }
 }
 elseif (Test-Path $XttsPython) {
     Write-Host "XTTS пропущен: условия лицензии не приняты." -ForegroundColor Yellow
