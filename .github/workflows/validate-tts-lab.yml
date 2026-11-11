@@ -1,0 +1,37 @@
+name: Validate PowerShell scripts
+
+on:
+  push:
+    branches:
+      - experiment/tts-lab
+  workflow_dispatch:
+
+jobs:
+  parse:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse PowerShell scripts with Windows PowerShell
+        shell: powershell
+        run: |
+          $ErrorActionPreference = "Stop"
+          $scripts = Get-ChildItem -Path . -Filter "*.ps1" -Recurse |
+            Where-Object { $_.FullName -notmatch "[\\\\/]vendor[\\\\/]|[\\\\/]envs[\\\\/]" }
+
+          foreach ($script in $scripts) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              $script.FullName,
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+
+            if ($errors.Count -gt 0) {
+              Write-Host "Syntax errors in $($script.FullName)" -ForegroundColor Red
+              $errors | Format-List *
+              throw "PowerShell parser failed."
+            }
+
+            Write-Host "OK: $($script.FullName)" -ForegroundColor Green
+          }
