@@ -79,7 +79,8 @@ function Install-XVibe {
 function Install-Silero {
     $Python = New-PythonEnvironment "silero"
     Invoke-Checked $Python @("-m", "pip", "install", "--upgrade", "pip") "Обновление pip для Silero"
-    Invoke-Checked $Python @("-m", "pip", "install", "torch", "torchaudio", "omegaconf", "soundfile", "--index-url", "https://download.pytorch.org/whl/cpu") "Установка Silero и PyTorch CPU"
+    Invoke-Checked $Python @("-m", "pip", "install", "torch", "torchaudio", "--index-url", "https://download.pytorch.org/whl/cpu") "Установка PyTorch CPU для Silero"
+    Invoke-Checked $Python @("-m", "pip", "install", "omegaconf", "soundfile") "Установка зависимостей Silero"
 }
 
 function Install-VoskTts {
