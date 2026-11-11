@@ -15,6 +15,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--text", required=True)
     parser.add_argument("--output-dir", required=True, type=Path)
+    parser.add_argument("--speaker-wav", type=Path)
     parser.add_argument("--voices", nargs="+", default=["Ana Florence", "Andrew Chipper"])
     args = parser.parse_args()
 
@@ -29,6 +30,18 @@ def main() -> int:
         tts.tts_to_file(
             text=args.text,
             speaker=speaker,
+            language="ru",
+            file_path=str(output),
+        )
+        print(f"Создано: {output}")
+
+    if args.speaker_wav:
+        if not args.speaker_wav.is_file():
+            raise FileNotFoundError(f"Не найден WAV-образец: {args.speaker_wav}")
+        output = args.output_dir / "XTTS_Cloned.wav"
+        tts.tts_to_file(
+            text=args.text,
+            speaker_wav=str(args.speaker_wav),
             language="ru",
             file_path=str(output),
         )
