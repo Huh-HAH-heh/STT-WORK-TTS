@@ -59,6 +59,14 @@ tools\tts-lab\TtsLab.cmd
 powershell -ExecutionPolicy Bypass -File .\tools\tts-lab\Run-TtsLab.ps1 -Text "Проверка голоса. Ну что, удивишь меня?"
 ~~~
 
+Для дополнительного теста клонирования укажи чистый WAV-образец одного говорящего (для xVibe рекомендуется 1–30 секунд, без музыки и фонового шума):
+
+~~~powershell
+.\tools\tts-lab\Run-TtsLab.ps1 -ReferenceWav "C:\VoiceSamples\my_voice.wav"
+~~~
+
+Тогда xVibe и XTTS дополнительно создадут варианты с тембром из этого WAV. Для XTTS потребуется отдельно принять условия лицензии.
+
 Только генерация, без автоматического воспроизведения:
 
 ~~~powershell
