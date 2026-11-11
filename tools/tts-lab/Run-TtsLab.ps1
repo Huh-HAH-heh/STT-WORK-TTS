@@ -157,17 +157,18 @@ foreach ($Case in $Cases) {
     Write-Host "----------------------------------------" -ForegroundColor DarkGray
     Write-Host ($Case.Engine + " / " + $Case.Voice) -ForegroundColor Cyan
     Write-Host $Case.Path
-    if (-not $NoPlayback) {
-        try {
-            $Player = [System.Media.SoundPlayer]::new($Case.Path)
-            $Player.Load()
-            $Player.PlaySync()
-            $Player.Dispose()
-        }
-        catch {
-            Write-Warning "Не удалось воспроизвести WAV: $($_.Exception.Message)"
-            continue
-        }
+    if ($NoPlayback) {
+        continue
+    }
+    try {
+        $Player = [System.Media.SoundPlayer]::new($Case.Path)
+        $Player.Load()
+        $Player.PlaySync()
+        $Player.Dispose()
+    }
+    catch {
+        Write-Warning "Не удалось воспроизвести WAV: $($_.Exception.Message)"
+        continue
     }
     $Rating = Read-Host "Оценка 1-5 (Enter — пропустить)"
     if ($Rating -match "^[1-5]$") {
