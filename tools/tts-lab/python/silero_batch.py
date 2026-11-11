@@ -24,6 +24,7 @@ def main() -> int:
         model="silero_tts",
         language="ru",
         speaker="v5_6_ru",
+        trust_repo=True,
     )
     model.to(torch.device("cpu"))
     for voice in args.voices:
