@@ -80,13 +80,8 @@ if (-not $IntentDemo) {
 
 if ($Settings.Intent.Enabled) {
     $IntentModel = Join-Path $Root "models\intent\Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
-    if (-not (Test-Path $IntentModel)) {
-        Write-Step "Локальная модель Qwen отсутствует — скачиваю"
-        Invoke-SetupScript (Join-Path $Root "tools\intent\Install-QwenIntentModel.ps1")
-    }
-    else {
-        Write-Host "[OK] Qwen GGUF model"
-    }
+    Write-Step "Проверяю наличие и SHA-256 модели Qwen"
+    Invoke-SetupScript (Join-Path $Root "tools\intent\Install-QwenIntentModel.ps1")
 
     $IntentEndpoint = [Uri]$Settings.Intent.Endpoint
     $HealthUrl = "$($IntentEndpoint.Scheme)://$($IntentEndpoint.Authority)/health"
