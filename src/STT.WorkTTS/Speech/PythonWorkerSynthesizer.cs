@@ -12,8 +12,6 @@ namespace STT.WorkTTS.Speech;
 /// </summary>
 public sealed class PythonWorkerSynthesizer : ISpeechSynthesizer
 {
-    private static readonly TimeSpan StartupTimeout = TimeSpan.FromMinutes(5);
-
     private readonly TtsSettings _settings;
     private readonly string _appDirectory;
     private readonly string _engine;
@@ -178,49 +176,93 @@ public sealed class PythonWorkerSynthesizer : ISpeechSynthesizer
         _process = process;
         _input = process.StandardInput;
         _output = process.StandardOutput;
-        _stderrTask = process.StandardError.ReadToEndAsync();
+        _stderrTask = PumpStandardErrorAsync(process.StandardError);
 
-        string? readyLine;
-        try
+        var startupTimer = Stopwatch.StartNew();
+        while (true)
         {
-            readyLine = await _output.ReadLineAsync(cancellationToken)
-                .AsTask()
-                .WaitAsync(StartupTimeout, cancellationToken);
-        }
-        catch
-        {
-            StopWorker();
-            throw;
-        }
-
-        if (string.IsNullOrWhiteSpace(readyLine))
-        {
-            var detail = await GetWorkerErrorAsync();
-            StopWorker();
-            throw new InvalidOperationException(
-                $"TTS worker {_engine} не смог инициализироваться. {detail}");
-        }
-
-        try
-        {
-            using var ready = JsonDocument.Parse(readyLine);
-            var root = ready.RootElement;
-            if (!root.TryGetProperty("ready", out var isReady) || !isReady.GetBoolean())
+            string? readyLine;
+            try
             {
+                var remaining = TimeSpan.FromSeconds(_settings.StartupTimeoutSeconds) - startupTimer.Elapsed;
+                if (remaining <= TimeSpan.Zero)
+                    throw new TimeoutException(
+                        $"Загрузка TTS {_engine}/{_voice} превысила {_settings.StartupTimeoutSeconds} секунд.");
+
+                readyLine = await _output.ReadLineAsync(cancellationToken)
+                    .AsTask()
+                    .WaitAsync(remaining, cancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                var detail = await GetWorkerErrorAsync();
+                StopWorker();
+                throw new TimeoutException(
+                    $"Не дождался готовности TTS {_engine}/{_voice} за {_settings.StartupTimeoutSeconds} секунд. " +
+                    $"Проверь интернет и логи загрузки модели. {detail}");
+            }
+            catch
+            {
+                StopWorker();
+                throw;
+            }
+
+            if (string.IsNullOrWhiteSpace(readyLine))
+            {
+                var detail = await GetWorkerErrorAsync();
+                StopWorker();
+                throw new InvalidOperationException(
+                    $"TTS worker {_engine} завершился до готовности. {detail}");
+            }
+
+            try
+            {
+                using var message = JsonDocument.Parse(readyLine);
+                var root = message.RootElement;
+
+                if (root.TryGetProperty("status", out var status))
+                {
+                    Console.WriteLine($"[TTS] {status.GetString()}");
+                    continue;
+                }
+
+                if (!root.TryGetProperty("ready", out var isReady))
+                    throw new InvalidDataException("Worker sent an unknown startup message.");
+
+                if (isReady.GetBoolean())
+                    return;
+
                 var error = root.TryGetProperty("error", out var errorValue)
                     ? errorValue.GetString()
                     : "модель не сообщила причину";
+                var details = await GetWorkerErrorAsync();
                 StopWorker();
-                throw new InvalidOperationException($"Не удалось загрузить модель {_engine}: {error}");
+                throw new InvalidOperationException($"Не удалось загрузить модель {_engine}: {error}. {details}");
+            }
+            catch (JsonException ex)
+            {
+                var detail = await GetWorkerErrorAsync();
+                StopWorker();
+                throw new InvalidDataException(
+                    $"TTS worker {_engine} вернул некорректный ответ при запуске. {detail}", ex);
             }
         }
-        catch (JsonException ex)
+    }
+
+    private static async Task<string> PumpStandardErrorAsync(StreamReader reader)
+    {
+        var buffer = new StringBuilder();
+
+        while (await reader.ReadLineAsync() is { } line)
         {
-            var detail = await GetWorkerErrorAsync();
-            StopWorker();
-            throw new InvalidDataException(
-                $"TTS worker {_engine} вернул некорректный ответ при запуске. {detail}", ex);
+            Console.Error.WriteLine($"[TTS] {line}");
+            buffer.AppendLine(line);
+
+            if (buffer.Length > 12000)
+                buffer.Remove(0, buffer.Length - 8000);
         }
+
+        return buffer.ToString();
     }
 
     private async Task<string> GetWorkerErrorAsync()
