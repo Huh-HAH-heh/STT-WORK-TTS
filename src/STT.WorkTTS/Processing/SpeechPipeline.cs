@@ -1,4 +1,5 @@
 using STT.WorkTTS.Domain;
+using STT.WorkTTS;
 using STT.WorkTTS.Speech;
 
 namespace STT.WorkTTS.Processing;
@@ -20,8 +21,14 @@ public sealed class SpeechPipeline
         AudioClip clip,
         CancellationToken cancellationToken = default)
     {
-        var transcription = _recognizer.Transcribe(clip);
-        var commandResult = await _processor.ProcessAsync(transcription, cancellationToken);
+        string transcription;
+        using (PerformanceLog.Measure("stt.vosk.transcribe", $"audio_seconds={clip.DurationSeconds:F1}"))
+            transcription = _recognizer.Transcribe(clip);
+
+        CommandResult commandResult;
+        using (PerformanceLog.Measure("assistant.intent_and_action"))
+            commandResult = await _processor.ProcessAsync(transcription, cancellationToken);
+
         return new PipelineResult(transcription, commandResult.Answer, commandResult.Warning);
     }
 }
