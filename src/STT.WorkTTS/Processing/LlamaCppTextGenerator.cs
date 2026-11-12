@@ -48,10 +48,7 @@ public sealed class LlamaCppTextGenerator : IDisposable
             if (await IsServerHealthyAsync(cancellationToken))
                 return;
 
-            var modelPath = ResolveProjectPath(_settings.ModelPath);
-            if (!File.Exists(modelPath))
-                throw new FileNotFoundException(
-                    $"Не найдена модель Qwen 4B: {modelPath}. Запусти Start.cmd для установки модели.");
+            await EnsureModelInstalledAsync(cancellationToken);
 
             var scriptPath = ResolveProjectPath(_settings.StartupScript);
             if (!File.Exists(scriptPath))
@@ -98,6 +95,45 @@ public sealed class LlamaCppTextGenerator : IDisposable
         {
             _startupLock.Release();
         }
+    }
+
+    private async Task EnsureModelInstalledAsync(CancellationToken cancellationToken)
+    {
+        var modelPath = ResolveProjectPath(_settings.ModelPath);
+        if (File.Exists(modelPath))
+            return;
+
+        var installerPath = ResolveProjectPath("tools/intent/Install-QwenIntentModel.ps1");
+        if (!File.Exists(installerPath))
+            throw new FileNotFoundException($"Не найден установщик модели Qwen 4B: {installerPath}");
+
+        Console.WriteLine();
+        Console.WriteLine("Qwen 4B нужна для этого запроса, загружаю модель (~2.5 GB)...");
+        Console.WriteLine("Откроется окно PowerShell с прогрессом загрузки. Его можно закрыть после завершения.");
+
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "powershell.exe",
+            UseShellExecute = true,
+            WindowStyle = ProcessWindowStyle.Normal,
+            WorkingDirectory = _rootDirectory
+        };
+        startInfo.ArgumentList.Add("-NoProfile");
+        startInfo.ArgumentList.Add("-ExecutionPolicy");
+        startInfo.ArgumentList.Add("Bypass");
+        startInfo.ArgumentList.Add("-File");
+        startInfo.ArgumentList.Add(installerPath);
+
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException("Не удалось запустить установщик Qwen 4B.");
+
+        await process.WaitForExitAsync(cancellationToken);
+        if (process.ExitCode != 0)
+            throw new InvalidOperationException(
+                $"Установка Qwen 4B завершилась с кодом {process.ExitCode}.");
+
+        if (!File.Exists(modelPath))
+            throw new FileNotFoundException("Установщик завершился, но файл Qwen 4B не найден.", modelPath);
     }
 
     private async Task<string> GenerateAsync(

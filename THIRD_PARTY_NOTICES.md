@@ -35,9 +35,14 @@
 - Piper voice ONNX files have separate model cards; the runtime is GPL-3.0-or-later.
 - Sources and setup instructions: tools/tts-lab/README.md.
 
-## Qwen intent model
-- Model: Qwen3-4B-Instruct-2507, GGUF Q4_K_M.
+## Qwen models
+- Fast intent model: Qwen3-0.6B, GGUF Q4_K_M conversion by QuantFactory.
 - Original model licence: Apache License 2.0.
+- Source model: https://huggingface.co/Qwen/Qwen3-0.6B
+- GGUF file: https://huggingface.co/QuantFactory/Qwen3-0.6B-GGUF
+- The installer tools/intent/Install-FastIntentModel.ps1 verifies the GGUF SHA-256.
+- Large generation model: Qwen3-4B-Instruct-2507, GGUF Q4_K_M, Apache License 2.0.
 - Source: https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507
 - GGUF quantization: https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF
-- Downloaded by tools/intent/Install-QwenIntentModel.ps1 and verified with SHA-256. The model file is not committed or bundled in the portable ZIP.
+- Downloaded on first use by tools/intent/Install-QwenIntentModel.ps1 and verified with SHA-256.
+- Both model files are excluded from Git and the portable ZIP.

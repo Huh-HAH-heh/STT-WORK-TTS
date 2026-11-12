@@ -177,15 +177,12 @@ else {
 }
 
 if ($Settings.Generation.Enabled) {
-    Write-Step "Проверяю большую модель Qwen3-4B для генерации текста"
-    Invoke-SetupScript (Join-Path $Root "tools\\intent\\Install-QwenIntentModel.ps1")
-    $GenerationEndpoint = [Uri]$Settings.Generation.Endpoint
-    $GenerationHealthUrl = "$($GenerationEndpoint.Scheme)://$($GenerationEndpoint.Authority)/health"
-    if (Test-HttpHealth $GenerationHealthUrl) {
-        Write-Host "[OK] Сервер Qwen 4B уже запущен: $GenerationHealthUrl" -ForegroundColor Green
+    $GenerationModelPath = Join-Path $Root ([string]$Settings.Generation.ModelPath)
+    if (Test-Path $GenerationModelPath) {
+        Write-Host "[OK] Веса Qwen 4B уже установлены; сервер запустится по требованию." -ForegroundColor Green
     }
     else {
-        Write-Host "[OK] Веса Qwen 4B установлены; сервер запустится при первом сложном запросе или генерации текста." -ForegroundColor Green
+        Write-Host "[INFO] Qwen 4B пока не скачивается. Загрузка начнётся только при первом сложном запросе или генерации текста." -ForegroundColor Cyan
     }
 }
 

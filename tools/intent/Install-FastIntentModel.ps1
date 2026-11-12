@@ -11,7 +11,7 @@ $ModelName = "Qwen3-0.6B.Q4_K_M.gguf"
 $ModelPath = Join-Path $ModelDirectory $ModelName
 $DownloadPath = "$ModelPath.download"
 $ModelUrl = "https://huggingface.co/QuantFactory/Qwen3-0.6B-GGUF/resolve/main/$ModelName"
-$ExpectedSha256 = "7af3fdf842f87b24672f8a7fdd50404043f0bfb71093ff91c31d2b49df4631d"
+$ExpectedSha256 = "7af3fdf842f87b24672f8a7f1dd50404043f0bfb71093ff91c31d2b49df4631d"
 
 New-Item -ItemType Directory -Force -Path $ModelDirectory | Out-Null
 
