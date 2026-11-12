@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $AppArguments = @($args | ForEach-Object { [string]$_ })
 
@@ -10,7 +10,7 @@ function Write-Step([string]$Message) {
 function Invoke-SetupScript([string]$Path, [string[]]$Arguments = @()) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Path @Arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "Подготовка завершилась с кодом $LASTEXITCODE: $Path"
+        throw "Подготовка завершилась с кодом ${LASTEXITCODE}: $Path"
     }
 }
 
