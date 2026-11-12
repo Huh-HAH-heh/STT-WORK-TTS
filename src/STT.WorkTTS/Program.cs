@@ -319,6 +319,9 @@ internal static class PerformanceLog
 
     public static IDisposable Measure(string stage, string? details = null) => new Measurement(stage, details);
 
+    public static void Record(string stage, double durationMs, string? details = null) =>
+        Write(stage, Math.Round(durationMs, 2), details);
+
     public static void Event(string stage, string? details = null) => Write(stage, null, details);
 
     private static void Write(string stage, double? durationMs, string? details)
