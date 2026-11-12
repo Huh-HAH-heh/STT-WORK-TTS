@@ -27,6 +27,7 @@ assets/voices/*MODEL_CARD*
 !assets/README.md
 
 # Local runtime data
+data/logs/
 data/recordings/
 data/speech/
 data/notes.txt
