@@ -37,9 +37,6 @@ internal static class Program
             return 1;
         }
 
-        if (args.Contains("--tts-demo", StringComparer.OrdinalIgnoreCase))
-            return await RunTtsDemo(settings, appDirectory);
-
         if (args.Contains("--intent-demo", StringComparer.OrdinalIgnoreCase))
             return await RunIntentDemo(settings);
 
@@ -193,34 +190,6 @@ internal static class Program
             try { Console.Beep(880, 700); }
             catch { /* Sound output may be unavailable in some sessions. */ }
         });
-
-    private static async Task<int> RunTtsDemo(AppSettings settings, string appDirectory)
-    {
-        const string sample = "Привет! Сегодня хорошая погода. Я запомнил твою заметку и могу прочитать её вслух. Проверим длинную фразу с числами: семнадцать плюс двадцать пять равно сорок два.";
-
-        try
-        {
-            Console.WriteLine("Один и тот же текст будет озвучен двумя движками.");
-            Console.WriteLine();
-            using (var piper = new PiperCliSynthesizer(settings.Tts, appDirectory))
-            {
-                Console.WriteLine("Piper — встроенный голос Denis:");
-                await piper.SpeakAsync(sample);
-            }
-
-            Console.WriteLine();
-            Console.WriteLine("Windows SAPI — системный голос (например, RHVoice):");
-            using (var sapi = new SapiSynthesizer(settings.Tts))
-                await sapi.SpeakAsync(sample);
-
-            return 0;
-        }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"Не удалось выполнить сравнение: {ex.Message}");
-            return 1;
-        }
-    }
 
     private static string DisplayText(string text) =>
         string.IsNullOrWhiteSpace(text) ? "[речь не распознана]" : text;
