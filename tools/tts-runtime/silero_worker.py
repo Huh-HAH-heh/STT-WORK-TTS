@@ -32,12 +32,10 @@ def main() -> int:
         }
         try:
             model, _ = torch.hub.load(**hub_args)
-        except AssertionError as exc:
-            # An older cached torch.hub checkout may have a stale models.yml
-            # that predates v5_6_ru. Refresh that checkout once, then retry.
-            if "v5_6_ru" not in str(exc):
-                raise
-            print("Обновляю локальный кэш Silero Hub: в нём отсутствует v5_6_ru.", file=sys.stderr)
+        except AssertionError:
+            # Cached torch.hub repositories can contain an older models.yml.
+            # Refresh the checkout once; if the model still cannot load, surface the real error.
+            print("Обновляю устаревший кэш Silero Hub и повторяю загрузку.", file=sys.stderr)
             model, _ = torch.hub.load(**hub_args, force_reload=True)
         model.to(torch.device("cpu"))
     except Exception as exc:
