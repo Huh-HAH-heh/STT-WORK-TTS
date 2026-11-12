@@ -29,6 +29,14 @@ internal static class Program
                 json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
             ) ?? throw new InvalidDataException("Файл настроек пустой.");
+
+            if (args.Contains("--list-voices", StringComparer.OrdinalIgnoreCase))
+            {
+                PrintAvailableVoices();
+                return 0;
+            }
+
+            ApplyTtsCommandLineOptions(args, settings.Tts);
             settings.Validate();
         }
         catch (Exception ex)
@@ -71,7 +79,7 @@ internal static class Program
             Console.WriteLine($"Распознавание: Vosk, {settings.Stt.SampleRate} Гц.");
             Console.WriteLine(sttDemo
                 ? "Синтез отключён: режим проверки микрофона и STT."
-                : $"Синтез: {settings.Tts.Engine}.");
+                : $"Синтез: {settings.Tts.Engine} / {settings.Tts.Voice}.");
             Console.WriteLine(settings.Intent.Enabled
                 ? $"Понимание команд: локальная нейросеть ({settings.Intent.ModelAlias}) — {settings.Intent.Endpoint}."
                 : "Понимание команд: локальные правила.");
@@ -145,6 +153,64 @@ internal static class Program
 
         Console.WriteLine("Работа завершена.");
         return 0;
+    }
+
+    private static void ApplyTtsCommandLineOptions(string[] args, TtsSettings settings)
+    {
+        string? engine = null;
+        string? voice = null;
+
+        for (var i = 0; i < args.Length; i++)
+        {
+            if (args[i] is "--tts" or "--tts-engine")
+            {
+                if (i + 1 >= args.Length)
+                    throw new InvalidDataException($"После {args[i]} нужно указать движок.");
+                engine = args[++i].ToLowerInvariant();
+            }
+            else if (args[i] is "--voice" or "--tts-voice")
+            {
+                if (i + 1 >= args.Length)
+                    throw new InvalidDataException($"После {args[i]} нужно указать голос.");
+                voice = args[++i].ToLowerInvariant();
+            }
+        }
+
+        if (engine is not null)
+        {
+            settings.Engine = engine switch
+            {
+                "silero" => "Silero",
+                "xvibe" or "x-vibe" => "XVibe",
+                "piper" => "Piper",
+                "sapi" => "Sapi",
+                _ => throw new InvalidDataException(
+                    $"Неизвестный TTS-движок '{engine}'. Доступны: silero, xvibe.")
+            };
+
+            if (voice is null)
+                settings.Voice = settings.Engine.Equals("XVibe", StringComparison.OrdinalIgnoreCase)
+                    ? "female_silky"
+                    : "xenia";
+        }
+
+        if (voice is not null)
+            settings.Voice = voice;
+    }
+
+    private static void PrintAvailableVoices()
+    {
+        Console.WriteLine("Доступные TTS-движки и голоса:");
+        Console.WriteLine();
+        Console.WriteLine("Silero (по умолчанию):");
+        Console.WriteLine("  xenia, kseniya, eugene, aidar, baya");
+        Console.WriteLine("  пример: Start.cmd --tts silero --voice xenia");
+        Console.WriteLine();
+        Console.WriteLine("xVibePocketTTS (запасной движок):");
+        Console.WriteLine("  female_silky, male_deep, male_authoritative");
+        Console.WriteLine("  пример: Start.cmd --tts xvibe --voice female_silky");
+        Console.WriteLine();
+        Console.WriteLine("Piper и SAPI оставлены как дополнительные legacy-варианты.");
     }
 
     private static async Task<int> RunIntentDemo(AppSettings settings)
