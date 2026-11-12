@@ -40,10 +40,8 @@ public sealed class LocalCommandProcessor : ICommandProcessor
         if (normalized.Length == 0)
             return new CommandResult("Не удалось распознать команду. Повтори, пожалуйста.");
 
-        if (ContainsAny(normalized, "помощь", "что ты умеешь", "список команд"))
-            return new CommandResult(
-                "Я умею сообщать время и дату, считать простые выражения, " +
-                "запоминать заметки и показывать их. Список действий можно расширять.");
+        if (IsCapabilityRequest(command))
+            return GetCapabilities();
 
         if (ContainsAny(normalized, "который час", "сколько времени", "текущее время"))
             return new CommandResult($"Сейчас {DateTime.Now:HH:mm}.");
@@ -91,9 +89,34 @@ public sealed class LocalCommandProcessor : ICommandProcessor
             return new CommandResult(calculation);
 
         return new CommandResult(
-            $"Я распознал: {command}. Пока для этой команды нет отдельного действия. " +
-            "Скажи «помощь», чтобы услышать список доступных команд.");
+            $"Я расслышала: {command}. Пока для этой команды нет отдельного сценария. " +
+            "Скажи «перечисли мои возможности», чтобы услышать список доступных действий.");
     }
+
+    public static bool IsCapabilityRequest(string text)
+    {
+        var value = text.Trim().ToLowerInvariant().Replace('ё', 'е');
+        if (ContainsAny(value,
+            "помощь", "что ты умеешь", "что ты можешь", "список команд",
+            "какие у тебя возможности", "перечисли возможности", "перечисли функции",
+            "расскажи что умеешь", "все что ты умеешь", "все твои функции"))
+            return true;
+
+        var listRequest = ContainsAny(value, "список", "перечис", "все");
+        var abilityRequest = ContainsAny(value, "доступ", "функц", "возмож", "умеешь", "можешь");
+        return listRequest && abilityRequest
+            || value.Contains("интерес", StringComparison.Ordinal)
+                && ContainsAny(value, "все", "доступ", "возмож", "можешь", "умеешь");
+    }
+
+    public static CommandResult GetCapabilities() =>
+        new(
+            "Я могу сообщать текущее время и дату, запускать и отменять таймеры, " +
+            "открывать Блокнот, Калькулятор, Проводник, браузер и настройки Windows, " +
+            "открывать сайты по адресу, показывать рабочий стол, управлять громкостью, " +
+            "включать и выключать звук, блокировать компьютер, выполнять простые вычисления, " +
+            "сохранять, читать и очищать заметки. Например, скажи: «открой калькулятор», " +
+            "«поставь таймер на пять минут», «сделай громкость 30 процентов» или «запомни купить хлеб».");
 
     private string? SaveNotes()
     {
