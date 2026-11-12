@@ -41,7 +41,7 @@ internal static class Program
             return await RunTtsDemo(settings, appDirectory);
 
         if (args.Contains("--intent-demo", StringComparer.OrdinalIgnoreCase))
-            return await RunIntentDemo(settings, appDirectory);
+            return await RunIntentDemo(settings);
 
         try
         {
@@ -137,18 +137,17 @@ internal static class Program
         return 0;
     }
 
-    private static async Task<int> RunIntentDemo(AppSettings settings, string appDirectory)
+    private static async Task<int> RunIntentDemo(AppSettings settings)
     {
         using var timers = CreateTimerService();
         using var interpreter = new LlamaCppIntentInterpreter(settings.Intent);
-        using var synthesizer = SpeechSynthesizerFactory.Create(settings.Tts, appDirectory);
-        var local = new LocalCommandProcessor(settings.Work, appDirectory);
+        var local = new LocalCommandProcessor(settings.Work, AppContext.BaseDirectory);
         var processor = new NeuralCommandProcessor(
             interpreter,
             new WindowsActionExecutor(timers),
             local);
 
-        Console.WriteLine("Тест нейросетевого понимания команд. Микрофон и Vosk не используются.");
+        Console.WriteLine("Тест нейросетевого понимания команд. Микрофон, Vosk и TTS не используются.");
         Console.WriteLine("Вводи фразы на русском; q — выход.");
         Console.WriteLine();
 
@@ -163,8 +162,7 @@ internal static class Program
             Console.WriteLine($"Ответ: {result.Answer}");
             if (result.Warning is not null)
                 Console.WriteLine($"Примечание: {result.Warning}");
-
-            await synthesizer.SpeakAsync(result.Answer);
+            Console.WriteLine();
         }
 
         return 0;
