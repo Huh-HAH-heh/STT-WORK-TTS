@@ -40,11 +40,20 @@ internal static class Program
         if (args.Contains("--tts-demo", StringComparer.OrdinalIgnoreCase))
             return await RunTtsDemo(settings, appDirectory);
 
+        if (args.Contains("--intent-demo", StringComparer.OrdinalIgnoreCase))
+            return await RunIntentDemo(settings, appDirectory);
+
         try
         {
             using var recorder = new MicrophoneRecorder(settings.Audio, appDirectory);
             using var recognizer = new VoskRecognizer(settings.Stt, appDirectory);
-            var processor = new LocalCommandProcessor(settings.Work, appDirectory);
+            var localProcessor = new LocalCommandProcessor(settings.Work, appDirectory);
+            using var timers = CreateTimerService();
+            using var interpreter = new LlamaCppIntentInterpreter(settings.Intent);
+            var executor = new WindowsActionExecutor(timers);
+            ICommandProcessor processor = settings.Intent.Enabled
+                ? new NeuralCommandProcessor(interpreter, executor, localProcessor)
+                : localProcessor;
             using var synthesizer = SpeechSynthesizerFactory.Create(settings.Tts, appDirectory);
             var pipeline = new SpeechPipeline(recognizer, processor);
 
@@ -55,7 +64,10 @@ internal static class Program
             Console.WriteLine("Для сравнения голосов запусти Start.cmd --tts-demo.");
             Console.WriteLine($"Распознавание: Vosk, {settings.Stt.SampleRate} Гц.");
             Console.WriteLine($"Синтез: {settings.Tts.Engine}.");
-            Console.WriteLine("Сеть, облачные API и GPU не используются.");
+            Console.WriteLine(settings.Intent.Enabled
+                ? $"Понимание команд: локальная нейросеть ({settings.Intent.ModelAlias}) — {settings.Intent.Endpoint}."
+                : "Понимание команд: локальные правила.");
+            Console.WriteLine("STT и LLM работают локально; облачные API не используются.");
             Console.WriteLine();
 
             while (true)
@@ -89,7 +101,7 @@ internal static class Program
                 try
                 {
                     Console.WriteLine("Распознаю речь...");
-                    var result = pipeline.Process(clip);
+                    var result = await pipeline.ProcessAsync(clip);
 
                     Console.WriteLine();
                     Console.WriteLine($"Распознано: {DisplayText(result.Transcription)}");
@@ -124,6 +136,52 @@ internal static class Program
         Console.WriteLine("Работа завершена.");
         return 0;
     }
+
+    private static async Task<int> RunIntentDemo(AppSettings settings, string appDirectory)
+    {
+        using var timers = CreateTimerService();
+        using var interpreter = new LlamaCppIntentInterpreter(settings.Intent);
+        using var synthesizer = SpeechSynthesizerFactory.Create(settings.Tts, appDirectory);
+        var local = new LocalCommandProcessor(settings.Work, appDirectory);
+        var processor = new NeuralCommandProcessor(
+            interpreter,
+            new WindowsActionExecutor(timers),
+            local);
+
+        Console.WriteLine("Тест нейросетевого понимания команд. Микрофон и Vosk не используются.");
+        Console.WriteLine("Вводи фразы на русском; q — выход.");
+        Console.WriteLine();
+
+        while (true)
+        {
+            Console.Write("> ");
+            var text = Console.ReadLine();
+            if (text is null || text.Trim().Equals("q", StringComparison.OrdinalIgnoreCase))
+                break;
+
+            var result = await processor.ProcessAsync(text);
+            Console.WriteLine($"Ответ: {result.Answer}");
+            if (result.Warning is not null)
+                Console.WriteLine($"Примечание: {result.Warning}");
+
+            await synthesizer.SpeakAsync(result.Answer);
+        }
+
+        return 0;
+    }
+
+    private static TimerService CreateTimerService() =>
+        new(message =>
+        {
+            lock (Console.Out)
+            {
+                Console.WriteLine();
+                Console.WriteLine($"\u0007🔔 {message}");
+            }
+
+            try { Console.Beep(880, 700); }
+            catch { /* Sound output may be unavailable in some sessions. */ }
+        });
 
     private static async Task<int> RunTtsDemo(AppSettings settings, string appDirectory)
     {
