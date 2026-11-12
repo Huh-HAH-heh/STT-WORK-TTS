@@ -20,6 +20,17 @@ jobs:
       - name: Build C# application
         run: dotnet build .\src\STT.WorkTTS\STT.WorkTTS.csproj --configuration Release
 
+      - name: Set up Python for adapter syntax validation
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Compile local TTS worker scripts
+        run: |
+          python -m py_compile .\tools\tts-runtime\silero_worker.py
+          python -m py_compile .\tools\tts-runtime\xvibe_worker.py
+          python -m py_compile .\tools\tts-lab\python\silero_batch.py
+
       - name: Parse PowerShell scripts with Windows PowerShell
         shell: powershell
         run: |
