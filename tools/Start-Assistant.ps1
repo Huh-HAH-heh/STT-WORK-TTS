@@ -43,9 +43,11 @@ $ListVoices = $AppArguments -contains "--list-voices"
 $SkipTts = $IntentDemo -or $SttDemo -or $ListVoices
 
 $TtsEngine = "silero"
+$TtsEngineExplicit = $false
 for ($i = 0; $i -lt $AppArguments.Count; $i++) {
     if ($AppArguments[$i] -in @("--tts", "--tts-engine") -and ($i + 1) -lt $AppArguments.Count) {
         $TtsEngine = $AppArguments[$i + 1].ToLowerInvariant()
+        $TtsEngineExplicit = $true
         break
     }
 }
@@ -86,6 +88,13 @@ if (-not $UsePortable -and -not (Get-Command dotnet -ErrorAction SilentlyContinu
 }
 
 $Settings = Get-Content -Raw -Path $SettingsPath | ConvertFrom-Json
+if (-not $TtsEngineExplicit) {
+    $TtsEngine = ([string]$Settings.Tts.Engine).ToLowerInvariant()
+    if ($TtsEngine -eq "x-vibe") { $TtsEngine = "xvibe" }
+}
+if ($TtsEngine -notin @("silero", "xvibe", "piper", "sapi")) {
+    throw "Неизвестный TTS в appsettings.json: $TtsEngine"
+}
 
 if (-not $IntentDemo) {
     $VoskModelDirectory = Join-Path $Root "assets\models\vosk-model-small-ru-0.22"
