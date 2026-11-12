@@ -11,7 +11,15 @@ public static class CommandScriptParser
 
     private static readonly Regex HelpPattern = new(
         @"(?:перечисл\w*|перечислени\w*|покаж\w*|назов\w*|дай|расскаж\w*)\s+(?:(?:мне|пожалуйста|все|всё|свои|доступные|доступных)\s+)*(?:(?:список)\s+)?(?:команд\w*|функц\w*|возможност\w*|действи\w*)|что\s+ты\s+(?:умеешь|можешь)|список\s+(?:всех\s+)?(?:команд\w*|функц\w*|возможност\w*)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled); 
+    private static readonly Regex SpokenUrlPattern = new(
+        @"(?:(?:открой|открыть|запусти|перейди\s+на|зайди\s+на)\s+)?(?<host>[a-z0-9-]+|ютуб|ютюб|ютьюб|гугл|гитхаб|википедия|реддит)\s+(?:точка|dot)\s+(?<tld>com|ru|org|net|io|dev|info|me|tv)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex DirectUrlPattern = new(
+        @"(?:(?:открой|открыть|запусти|перейди\s+на|зайди\s+на)\s+)(?<url>(?:[a-z0-9-]+\.)+(?:com|ru|org|net|io|dev|info|me|tv)(?:/[a-z0-9/_?&=.%#-]*)?)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
 
     private static readonly Dictionary<string, int> NumberWords = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -66,6 +74,34 @@ public static class CommandScriptParser
             }));
         }
 
+        var recognizedUrlMatches = new List<Match>();
+        foreach (Match match in SpokenUrlPattern.Matches(text))
+        {
+            var host = NormalizeHost(match.Groups["host"].Value);
+            var tld = match.Groups["tld"].Value.ToLowerInvariant();
+            var url = $"https://{host}.{tld}";
+            recognizedUrlMatches.Add(match);
+            commands.Add((match.Index, new IntentCommand
+            {
+                Action = "url.open",
+                Arguments = new IntentArguments { Url = url }
+            }));
+        }
+
+        foreach (Match match in DirectUrlPattern.Matches(text))
+        {
+            if (recognizedUrlMatches.Any(x => x.Index == match.Index))
+                continue;
+
+            var value = match.Groups["url"].Value;
+            recognizedUrlMatches.Add(match);
+            commands.Add((match.Index, new IntentCommand
+            {
+                Action = "url.open",
+                Arguments = new IntentArguments { Url = $"https://{value}" }
+            }));
+        }
+
         if (commands.Count == 0)
         {
             if (IsGreetingOnly(text))
@@ -93,6 +129,11 @@ public static class CommandScriptParser
             for (var i = helpMatch.Index; i < helpMatch.Index + helpMatch.Length; i++)
                 chars[i] = ' ';
         }
+        foreach (var match in recognizedUrlMatches)
+        {
+            for (var i = match.Index; i < match.Index + match.Length; i++)
+                chars[i] = ' ';
+        }
 
         var residue = new string(chars).ToLowerInvariant().Replace('ё', 'е');
         residue = Regex.Replace(
@@ -113,6 +154,17 @@ public static class CommandScriptParser
         };
         return true;
     }
+
+    private static string NormalizeHost(string value) =>
+        value.Trim().ToLowerInvariant() switch
+        {
+            "ютуб" or "ютюб" or "ютьюб" => "www.youtube",
+            "гугл" => "www.google",
+            "гитхаб" => "github",
+            "википедия" => "ru.wikipedia",
+            "реддит" => "www.reddit",
+            _ => value.Trim().ToLowerInvariant()
+        };
 
     private static bool IsGreetingOnly(string text)
     {
