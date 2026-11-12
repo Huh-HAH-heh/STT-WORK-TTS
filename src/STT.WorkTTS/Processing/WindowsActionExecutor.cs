@@ -44,6 +44,8 @@ public sealed class WindowsActionExecutor
                 "audio.mute" => SetMute(true),
                 "audio.unmute" => SetMute(false),
                 "system.lock" => LockWorkstation(),
+                "assistant.list_capabilities" => LocalCommandProcessor.GetCapabilities(),
+                "assistant.greeting" => new CommandResult("Привет. Я готова принимать команды."),
                 "clarify" => new CommandResult(
                     string.IsNullOrWhiteSpace(command.Clarification)
                         ? "Уточни, пожалуйста, что именно нужно сделать."

@@ -1,5 +1,11 @@
 namespace STT.WorkTTS.Processing;
 
+public sealed class IntentPlan
+{
+    public List<IntentCommand> Actions { get; init; } = [];
+    public string? Clarification { get; init; }
+}
+
 public sealed class IntentCommand
 {
     public string Action { get; init; } = "unknown";

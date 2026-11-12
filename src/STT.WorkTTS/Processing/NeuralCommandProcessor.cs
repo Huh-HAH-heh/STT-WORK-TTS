@@ -26,34 +26,71 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
         if (string.IsNullOrWhiteSpace(text))
             return new CommandResult("Не удалось распознать речь. Повтори, пожалуйста.");
 
-        // Capability questions are a deterministic help script, not an ambiguous OS command.
-        if (LocalCommandProcessor.IsCapabilityRequest(text))
+        IntentPlan plan;
+        if (CommandScriptParser.TryParse(text, out var fastPlan))
+        {
+            using (PerformanceLog.Measure("intent.fast_script", $"actions={fastPlan.Actions.Count}"))
+                plan = fastPlan;
+        }
+        else
+        {
+            try
+            {
+                using (PerformanceLog.Measure("llm.qwen.plan_request"))
+                    plan = await _interpreter.InterpretAsync(text, cancellationToken);
+            }
+            catch (Exception ex) when (
+                ex is HttpRequestException or
+                TaskCanceledException or
+                InvalidDataException or
+                JsonException)
+            {
+                return new CommandResult(
+                    "Не удалось получить план действий от локальной модели. Проверь llama-server.",
+                    ex.Message);
+            }
+        }
+
+        if (plan.Actions.Count == 0)
+        {
+            if (!string.IsNullOrWhiteSpace(plan.Clarification))
+                return new CommandResult(plan.Clarification);
+
             return _localFallback.Process(text);
-
-        IntentCommand intent;
-        try
-        {
-            using (PerformanceLog.Measure("llm.qwen.intent_request"))
-                intent = await _interpreter.InterpretAsync(text, cancellationToken);
-        }
-        catch (Exception ex) when (
-            ex is HttpRequestException or
-            TaskCanceledException or
-            InvalidDataException or
-            JsonException)
-        {
-            return new CommandResult(
-                "Не удалось обратиться к локальной языковой модели. Проверь, запущен ли llama-server.",
-                ex.Message);
         }
 
-        if (intent.Action == "unknown")
+        var answers = new List<string>();
+        var warnings = new List<string>();
+
+        foreach (var action in plan.Actions)
         {
-            using (PerformanceLog.Measure("intent.local_fallback"))
-                return _localFallback.Process(text);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            CommandResult result;
+            if (action.Action == "unknown")
+            {
+                using (PerformanceLog.Measure("intent.local_fallback"))
+                    result = _localFallback.Process(text);
+            }
+            else
+            {
+                using (PerformanceLog.Measure("action.execute", $"action={action.Action}"))
+                    result = await _executor.ExecuteAsync(action, cancellationToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(result.Answer))
+                answers.Add(result.Answer);
+            if (!string.IsNullOrWhiteSpace(result.Warning))
+                warnings.Add(result.Warning);
         }
 
-        using (PerformanceLog.Measure("action.execute", $"action={intent.Action}"))
-            return await _executor.ExecuteAsync(intent, cancellationToken);
+        if (!string.IsNullOrWhiteSpace(plan.Clarification))
+            warnings.Add(plan.Clarification);
+
+        var answer = answers.Count == 0
+            ? "План обработан, но действий для выполнения не найдено."
+            : string.Join(" ", answers);
+
+        return new CommandResult(answer, warnings.Count == 0 ? null : string.Join(" ", warnings));
     }
 }

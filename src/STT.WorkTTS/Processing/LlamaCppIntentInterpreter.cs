@@ -1,6 +1,5 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using STT.WorkTTS.Configuration;
 
 namespace STT.WorkTTS.Processing;
@@ -12,41 +11,55 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "action": {
-          "type": "string",
-          "enum": [
-            "system.get_time", "system.get_date", "system.get_datetime",
-            "timer.start", "timer.cancel",
-            "app.open", "url.open",
-            "window.show_desktop",
-            "audio.set_volume", "audio.adjust_volume", "audio.mute", "audio.unmute",
-            "system.lock",
-            "unknown", "clarify"
-          ]
-        },
-        "arguments": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "duration_seconds": { "type": ["integer", "null"], "minimum": 1, "maximum": 86400 },
-            "label": { "type": ["string", "null"] },
-            "timer_id": { "type": ["string", "null"] },
-            "app_id": {
-              "type": ["string", "null"],
-              "enum": ["notepad", "calculator", "explorer", "browser", "settings", null]
+        "actions": {
+          "type": "array",
+          "minItems": 0,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "system.get_time", "system.get_date", "system.get_datetime",
+                  "timer.start", "timer.cancel",
+                  "app.open", "url.open",
+                  "window.show_desktop",
+                  "audio.set_volume", "audio.adjust_volume", "audio.mute", "audio.unmute",
+                  "system.lock",
+                  "assistant.list_capabilities", "assistant.greeting",
+                  "unknown", "clarify"
+                ]
+              },
+              "arguments": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "duration_seconds": { "type": ["integer", "null"], "minimum": 1, "maximum": 86400 },
+                  "label": { "type": ["string", "null"] },
+                  "timer_id": { "type": ["string", "null"] },
+                  "app_id": {
+                    "type": ["string", "null"],
+                    "enum": ["notepad", "calculator", "explorer", "browser", "settings", null]
+                  },
+                  "url": { "type": ["string", "null"] },
+                  "volume_percent": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
+                  "volume_delta": { "type": ["integer", "null"], "minimum": -100, "maximum": 100 }
+                },
+                "required": [
+                  "duration_seconds", "label", "timer_id", "app_id",
+                  "url", "volume_percent", "volume_delta"
+                ]
+              },
+              "clarification": { "type": ["string", "null"] }
             },
-            "url": { "type": ["string", "null"] },
-            "volume_percent": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
-            "volume_delta": { "type": ["integer", "null"], "minimum": -100, "maximum": 100 }
-          },
-          "required": [
-            "duration_seconds", "label", "timer_id", "app_id",
-            "url", "volume_percent", "volume_delta"
-          ]
+            "required": ["action", "arguments", "clarification"]
+          }
         },
         "clarification": { "type": ["string", "null"] }
       },
-      "required": ["action", "arguments", "clarification"]
+      "required": ["actions", "clarification"]
     }
     """;
 
@@ -72,32 +85,30 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
         _schema = schemaDocument.RootElement.Clone();
     }
 
-    public async Task<IntentCommand> InterpretAsync(
+    public async Task<IntentPlan> InterpretAsync(
         string transcription,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(transcription))
-            return new IntentCommand { Action = "unknown" };
+            return new IntentPlan();
 
         var now = DateTimeOffset.Now;
-        var systemPrompt = BuildSystemPrompt(now);
-
         var request = new
         {
             model = _settings.ModelAlias,
             messages = new object[]
             {
-                new { role = "system", content = systemPrompt },
+                new { role = "system", content = BuildSystemPrompt(now) },
                 new { role = "user", content = transcription }
             },
             temperature = 0,
-            max_tokens = 180,
+            max_tokens = 384,
             response_format = new
             {
                 type = "json_schema",
                 json_schema = new
                 {
-                    name = "windows_voice_intent",
+                    name = "windows_action_plan",
                     strict = true,
                     schema = _schema
                 }
@@ -124,62 +135,63 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
             .GetString();
 
         if (string.IsNullOrWhiteSpace(content))
-            throw new InvalidDataException("Нейросеть вернула пустой ответ.");
+            throw new InvalidDataException("Нейросеть вернула пустой план действий.");
 
         try
         {
-            return JsonSerializer.Deserialize<IntentCommand>(content, JsonOptions)
-                ?? throw new InvalidDataException("Не удалось разобрать JSON намерения.");
+            return JsonSerializer.Deserialize<IntentPlan>(content, JsonOptions)
+                ?? throw new InvalidDataException("Не удалось разобрать план действий.");
         }
         catch (JsonException ex)
         {
             throw new InvalidDataException(
-                $"Нейросеть вернула некорректный JSON: {Limit(content, 300)}", ex);
+                $"Нейросеть вернула некорректный JSON: {Limit(content, 500)}", ex);
         }
     }
 
     private static string BuildSystemPrompt(DateTimeOffset now) =>
         $"""
-        Ты — модуль понимания речи и сценариев голосовой помощницы Windows.
-        Ты работаешь от лица женщины. Отвечай по-русски и говори о себе только в женском роде:
-        «я поняла», «я готова», «я не смогла». Не используй мужские формы «понял», «готов», «сделал».
-        Уточняй вежливо, коротко и естественно. Не повторяй вопрос пользователя без необходимости.
-        Получаешь русскую транскрипцию с микрофона. Верни только объект по заданной JSON Schema.
+        Ты — преобразователь русской речи в план действий Windows. Ты не ведёшь беседу и не объясняешь команды.
+        Твоя задача — извлечь ИЗ ВСЕЙ фразы ВСЕ запрошенные действия и вернуть JSON по схеме.
 
-        Локальное время компьютера: {now:yyyy-MM-dd HH:mm:ss zzz}.
-        Часовой пояс компьютера: {TimeZoneInfo.Local.Id}.
+        ВАЖНО:
+        - Поле actions — массив действий в исходном порядке. Не ограничивайся первым действием.
+        - Каждое отдельное действие пользователя — отдельный элемент массива.
+        - Не объединяй и не теряй повторные команды. Два таймера — это два timer.start.
+        - Слова приветствия, «как дела», вежливые слова и связки не являются действиями: игнорируй их и продолжай разбор.
+        - Запрос перечислить команды/функции/возможности добавляй как assistant.list_capabilities, даже вместе с другими действиями.
+        - Если фраза содержит несколько независимых просьб, верни их все.
+        - Не выдавай clarify только из-за разговорной формы или ошибки распознавания.
+        - Заполняй известные аргументы. Неизвестный необязательный аргумент оставляй null.
+        - Если одна просьба непонятна, сохрани остальные распознанные действия и добавь одну короткую clarification.
+        - Если действий нет, верни пустой actions и clarification=null; не превращай обычное приветствие в уточняющий вопрос.
 
-        Твоя задача — выбрать одно действие и извлечь его аргументы. Не отвечай пользователю обычным текстом.
-        Не выдумывай значения. Не выбирай clarify только потому, что фраза сказана разговорно или неполно.
-        Сначала определи намерение по смыслу и выбери подходящий сценарий.
-        Уточняй только тогда, когда без обязательного параметра действительно нельзя выполнить действие.
-        Если действие не поддерживается, выбери unknown, а не задавай бессмысленный уточняющий вопрос.
-        Для обычных просьб о помощи или возможностях не придумывай уточнения: такой запрос уже обработан отдельным сценарием справки.
-        Учитывай разговорные формы и неточную транскрипцию: «сделай тише» и «потише звук» — изменение громкости;
-        «открой калькулятор» и «запусти калькулятор» — одно действие; «таймер через пять минут» — запуск таймера.
+        Локальное время ПК: {now:yyyy-MM-dd HH:mm:ss zzz}.
+        Часовой пояс: {TimeZoneInfo.Local.Id}.
 
-        Правила:
-        - «который час», «сколько времени» -> system.get_time.
-        - «какая дата», «какое сегодня число» -> system.get_date.
-        - запрос одновременно о дате и времени -> system.get_datetime.
-        - «таймер на пять минут», «напомни через 30 секунд» -> timer.start; duration_seconds должен быть точным числом секунд.
-        - «отмени таймер» -> timer.cancel. Если указан номер таймера, укажи timer_id.
-        - «открой блокнот» -> app.open с app_id=notepad.
-        - «открой калькулятор» -> app.open с app_id=calculator.
-        - «открой проводник» -> app.open с app_id=explorer.
-        - «открой браузер» -> app.open с app_id=browser.
-        - «открой настройки Windows» -> app.open с app_id=settings.
-        - явный адрес сайта -> url.open с исходным URL. Если схема не указана, добавь https://.
-        - «покажи рабочий стол», «сверни все окна» -> window.show_desktop.
-        - просьба установить громкость в процентах -> audio.set_volume и volume_percent.
-        - «сделай тише/громче на N процентов» -> audio.adjust_volume и volume_delta: отрицательное/положительное число.
-        - если пользователь говорит только «сделай тише» или «громче», используй volume_delta=-10 или volume_delta=10.
-        - «выключи звук» -> audio.mute; «включи звук» -> audio.unmute.
-        - «заблокируй компьютер» -> system.lock.
-        - если просят выполнить команду PowerShell, CMD, скрипт, удалить/изменить файлы, выключить/перезагрузить ПК, менять реестр или обходить безопасность, выбери clarify и сообщи, что такое действие пока не разрешено.
-        - не превращай вопрос или обсуждение действия в просьбу выполнить его.
-        - если фраза не соответствует доступным действиям, выбери unknown.
-        - не добавляй пояснения, Markdown или текст вне JSON.
+        Доступные сценарии:
+        - перечислить команды/возможности/действия -> assistant.list_capabilities.
+        - одно приветствие без команд -> assistant.greeting.
+        - время -> system.get_time; дата -> system.get_date; оба -> system.get_datetime.
+        - таймер на N секунд/минут/часов -> timer.start; duration_seconds = точная длительность, label короткий.
+        - отменить таймер -> timer.cancel; если номер не указан, timer_id=null (отменить последний).
+        - открыть/запустить Блокнот -> app.open, app_id=notepad.
+        - открыть/запустить Калькулятор -> app.open, app_id=calculator.
+        - открыть Проводник -> app.open, app_id=explorer.
+        - открыть браузер -> app.open, app_id=browser.
+        - открыть настройки Windows -> app.open, app_id=settings.
+        - открыть сайт/ссылку -> url.open; разрешены только http/https адреса.
+        - показать рабочий стол/свернуть окна -> window.show_desktop.
+        - установить громкость -> audio.set_volume, volume_percent.
+        - громче/тише на N процентов -> audio.adjust_volume, volume_delta.
+        - просто «громче»/«тише» -> volume_delta=10/-10.
+        - выключить/включить звук -> audio.mute / audio.unmute.
+        - заблокировать ПК -> system.lock.
+        - расчёт, заметки и чтение заметок, если они не описаны выше, направь в unknown для локального сценария.
+        - неизвестное действие -> unknown. Не выдумывай WinAPI-вызов.
+
+        Грамматика команды важнее дословных форм слов. «Включи ещё один таймер на десять секунд» — самостоятельный второй таймер.
+        Верни только JSON, без Markdown и пояснений.
         """;
 
     private static string Limit(string value, int maxLength) =>
