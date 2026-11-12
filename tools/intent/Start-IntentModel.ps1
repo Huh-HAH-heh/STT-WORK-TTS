@@ -71,6 +71,7 @@ $LogDirectory = Join-Path $Root "data\logs"
 New-Item -ItemType Directory -Force -Path $LogDirectory | Out-Null
 $StdOutLog = Join-Path $LogDirectory "llama-server.stdout.log"
 $StdErrLog = Join-Path $LogDirectory "llama-server.stderr.log"
+Remove-Item $StdOutLog, $StdErrLog -Force -ErrorAction SilentlyContinue
 
 $ArgumentLine = ($ServerArgs | ForEach-Object {
     '"' + ([string]$_).Replace('"', '\"') + '"'
