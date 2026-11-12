@@ -47,3 +47,6 @@ tools/tts-lab/models/
 tools/tts-lab/output/
 tools/tts-lab/ratings.csv
 tools/tts-lab/tmp/
+
+# Local intent model downloads
+models/intent/
