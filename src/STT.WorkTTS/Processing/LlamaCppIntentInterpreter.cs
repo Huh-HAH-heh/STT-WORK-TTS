@@ -104,7 +104,7 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
                 new { role = "user", content = transcription }
             },
             temperature = 0,
-            max_tokens = 384,
+            max_tokens = 256,
             response_format = new
             {
                 type = "json_schema",
@@ -139,27 +139,42 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
         if (string.IsNullOrWhiteSpace(content))
             throw new InvalidDataException("Нейросеть вернула пустой план действий.");
 
+        var choice = document.RootElement.GetProperty("choices")[0];
+        var finishReason = choice.TryGetProperty("finish_reason", out var finish)
+            ? finish.GetString()
+            : null;
+        if (finishReason == "length")
+            throw new InvalidDataException("Модель оборвала план: достигнут лимит выходных токенов.");
+
         try
         {
-            return JsonSerializer.Deserialize<IntentPlan>(content, JsonOptions)
+            var plan = JsonSerializer.Deserialize<IntentPlan>(content, JsonOptions)
                 ?? throw new InvalidDataException("Не удалось разобрать план действий.");
+            IntentPlanValidator.Validate(transcription, plan);
+            return plan;
         }
         catch (JsonException ex)
         {
             throw new InvalidDataException(
-                $"Нейросеть вернула некорректный JSON: {Limit(content, 500)}", ex);
+                $"Модель вернула некорректный JSON: {Limit(content, 500)}", ex);
         }
     }
 
     private static string BuildSystemPrompt(DateTimeOffset now) =>
         $"""
         Ты — быстрый маршрутизатор русских голосовых команд Windows. Не общайся и не выполняй действия сам.
-        Извлеки ВСЕ просьбы пользователя по порядку и верни только JSON по схеме. Без рассуждений и Markdown.
+        Классифицируй только то, что действительно сказано. Не достраивай неразборчивую речь догадками.
+        Одна ясная просьба = одно действие. Не добавляй действий, о которых пользователь не просил.
+        Если запрос плохо распознан, содержит неизвестную программу или несколько неясных действий,
+        используй unknown/clarify вместо выдумывания времени, приложений, URL или параметров.
+        Верни только JSON по схеме. Без рассуждений и Markdown.
 
         Правила:
         - actions — массив отдельных действий, максимум 8. Не теряй повторные и составные просьбы.
-        - Заполняй только известные аргументы; неизвестные значения — null.
-        - Не выдумывай новые Windows-вызовы. Неподдерживаемую системную команду отмечай unknown.
+        - Заполняй только известные аргументы; неизвестные значения — null. Все не относящиеся к действию поля должны быть null.
+        - Не подставляй "unknown" или "null" строкой: unknown — только action, в arguments все поля null.
+        - Не выдумывай время, приложения, ссылки и параметры. Неподдерживаемую системную команду отмечай unknown.
+        - PowerShell, CMD, выполнение скриптов и произвольных ярлыков не поддерживаются: unknown/clarify, никогда не подменяй их другой командой.
         - Короткое уточнение — только когда без него нельзя выбрать действие.
         - Для обычного приветствия используй assistant.greeting; для списка возможностей — assistant.list_capabilities.
 

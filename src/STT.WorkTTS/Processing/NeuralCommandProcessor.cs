@@ -48,20 +48,26 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
         {
             try
             {
-                using (PerformanceLog.Measure("llm.fast_intent.plan_request"))
-                    plan = await _fastInterpreter.InterpretAsync(text, cancellationToken);
-
-                if (_textGenerator.Enabled && RequiresHeavyFallback(plan))
+                var fastModelFailed = false;
+                try
                 {
-                    await _textGenerator.EnsureServerReadyAsync(cancellationToken);
-                    using (PerformanceLog.Measure("llm.qwen.fallback_plan"))
-                        plan = await _heavyInterpreter.InterpretAsync(text, cancellationToken);
+                    using (PerformanceLog.Measure("llm.fast_intent.plan_request"))
+                        plan = await _fastInterpreter.InterpretAsync(text, cancellationToken);
                 }
+                catch (Exception ex) when (IsModelException(ex))
+                {
+                    fastModelFailed = true;
+                    PerformanceLog.Event("llm.fast_intent.rejected", ex.Message);
+                    plan = new IntentPlan();
+                }
+
+                if (fastModelFailed || RequiresHeavyFallback(plan))
+                    plan = await InterpretWithHeavyModelAsync(text, cancellationToken);
             }
             catch (Exception ex) when (IsModelException(ex))
             {
                 return new CommandResult(
-                    "Не удалось получить план действий от локальной модели. Проверь установку и состояние llama-server.",
+                    "Не удалось безопасно разобрать запрос. Повтори команду короче и назови действие точнее.",
                     ex.Message);
             }
         }
@@ -135,6 +141,22 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
             : string.Join(" ", answers.OrderBy(x => x.Position).Select(x => x.Text));
 
         return new CommandResult(answer, warnings.Count == 0 ? null : string.Join(" ", warnings));
+    }
+
+    private async Task<IntentPlan> InterpretWithHeavyModelAsync(
+        string text,
+        CancellationToken cancellationToken)
+    {
+        if (!_textGenerator.Enabled)
+            throw new InvalidOperationException("Большая модель отключена; не удалось безопасно обработать сложную команду.");
+
+        await _textGenerator.EnsureServerReadyAsync(cancellationToken);
+        using (PerformanceLog.Measure("llm.qwen.fallback_plan"))
+        {
+            var plan = await _heavyInterpreter.InterpretAsync(text, cancellationToken);
+            PerformanceLog.Event("llm.qwen.fallback_validated", $"actions={plan.Actions.Count}");
+            return plan;
+        }
     }
 
     private async Task<CommandResult> AnswerWithQwenAsync(
