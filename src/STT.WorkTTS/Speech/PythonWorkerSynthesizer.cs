@@ -56,6 +56,19 @@ public sealed class PythonWorkerSynthesizer : ISpeechSynthesizer
             throw new FileNotFoundException($"Не найден адаптер TTS: {_workerScript}");
     }
 
+    public async Task WarmUpAsync(CancellationToken cancellationToken = default)
+    {
+        await _gate.WaitAsync(cancellationToken);
+        try
+        {
+            await EnsureStartedAsync(cancellationToken);
+        }
+        finally
+        {
+            _gate.Release();
+        }
+    }
+
     public async Task SpeakAsync(string text, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(text) || (!_settings.PlayAudio && !_settings.SaveSpeech))
@@ -255,7 +268,7 @@ public sealed class PythonWorkerSynthesizer : ISpeechSynthesizer
                     process.StandardInput.Flush();
                     process.StandardInput.Close();
                 }
-                catch (IOException) { }
+                catch (Exception ex) when (ex is IOException or InvalidOperationException or ObjectDisposedException) { }
 
                 if (!process.WaitForExit(2000))
                     process.Kill(entireProcessTree: true);
