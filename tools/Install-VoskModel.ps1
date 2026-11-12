@@ -8,13 +8,14 @@ $Root = Split-Path -Parent $PSScriptRoot
 $Assets = Join-Path $Root "assets"
 $ModelDirectory = Join-Path $Assets ("models\" + $ModelName)
 $Marker = Join-Path $ModelDirectory "conf\model.conf"
+$AcousticModel = Join-Path $ModelDirectory "am\final.mdl"
 $TempDirectory = Join-Path $Root ".build-temp"
 $PartialArchive = Join-Path $TempDirectory ($ModelName + ".zip.download")
 $Archive = Join-Path $TempDirectory ($ModelName + ".zip")
 $ExtractDirectory = Join-Path $TempDirectory ($ModelName + "-extract")
 $Url = "https://alphacephei.com/vosk/models/$ModelName.zip"
 
-if (Test-Path $Marker) {
+if ((Test-Path $Marker) -and (Test-Path $AcousticModel) -and (Get-Item $AcousticModel).Length -gt 1000000) {
     Write-Host "Vosk model is already installed: $ModelDirectory" -ForegroundColor Green
     exit 0
 }
