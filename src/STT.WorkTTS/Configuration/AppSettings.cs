@@ -14,9 +14,18 @@ public sealed class AppSettings
             throw new InvalidDataException("Для текущей компактной модели Vosk используется частота 16000 Гц.");
         if (Audio.MaxRecordingSeconds is < 1 or > 300)
             throw new InvalidDataException("Audio.MaxRecordingSeconds должен быть от 1 до 300.");
-        if (!Tts.Engine.Equals("Piper", StringComparison.OrdinalIgnoreCase)
-            && !Tts.Engine.Equals("Sapi", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidDataException("Tts.Engine должен быть Piper или Sapi.");
+        if (!new[] { "Silero", "XVibe", "Piper", "Sapi" }
+            .Contains(Tts.Engine, StringComparer.OrdinalIgnoreCase))
+            throw new InvalidDataException("Tts.Engine должен быть Silero, XVibe, Piper или Sapi.");
+
+        var allowedVoices = Tts.Engine.Equals("Silero", StringComparison.OrdinalIgnoreCase)
+            ? new[] { "aidar", "baya", "kseniya", "xenia", "eugene" }
+            : Tts.Engine.Equals("XVibe", StringComparison.OrdinalIgnoreCase)
+                ? new[] { "male_deep", "female_silky", "male_authoritative" }
+                : Array.Empty<string>();
+
+        if (allowedVoices.Length > 0 && !allowedVoices.Contains(Tts.Voice, StringComparer.OrdinalIgnoreCase))
+            throw new InvalidDataException($"Голос '{Tts.Voice}' не поддерживается движком {Tts.Engine}.");
 
         if (Intent.TimeoutSeconds is < 5 or > 120)
             throw new InvalidDataException("Intent.TimeoutSeconds должен быть от 5 до 120.");
@@ -51,7 +60,12 @@ public sealed class WorkSettings
 
 public sealed class TtsSettings
 {
-    public string Engine { get; set; } = "Piper";
+    public string Engine { get; set; } = "Silero";
+    public string Voice { get; set; } = "xenia";
+    public string SileroPythonExecutable { get; set; } = "tools/tts-lab/envs/silero/Scripts/python.exe";
+    public string SileroWorkerScript { get; set; } = "tools/tts-runtime/silero_worker.py";
+    public string XvibePythonExecutable { get; set; } = "tools/tts-lab/vendor/xVibePocketTTS/.venv/Scripts/python.exe";
+    public string XvibeWorkerScript { get; set; } = "tools/tts-runtime/xvibe_worker.py";
     public string PiperExecutable { get; set; } = "assets/piper/piper.exe";
     public string PiperModel { get; set; } = "assets/voices/ru_RU-denis-medium.onnx";
     public bool PlayAudio { get; set; } = true;
