@@ -111,32 +111,30 @@ else {
 }
 
 if (-not $SkipTts) {
-    $PythonLauncher = Get-Command py -ErrorAction SilentlyContinue
-    if (-not $PythonLauncher) {
-        throw "Для Silero/xVibe нужен Python 3.12 с py.exe. Установи Python 3.12 и повтори запуск."
-    }
-
-    & py -3.12 --version
-    if ($LASTEXITCODE -ne 0) {
-        throw "Python 3.12 не найден. Установи Python 3.12 x64 и включи py launcher."
-    }
-
-    if ($TtsEngine -eq "silero") {
-        $TtsPython = Join-Path $Root "tools\tts-lab\envs\silero\Scripts\python.exe"
-        $Imports = "import torch, soundfile, omegaconf"
-        $InstallName = "silero"
-    }
-    elseif ($TtsEngine -eq "xvibe") {
-        $TtsPython = Join-Path $Root "tools\tts-lab\vendor\xVibePocketTTS\.venv\Scripts\python.exe"
-        $Imports = "import torch, soundfile, xvibe_pocket_tts"
-        $InstallName = "xvibe"
-    }
-    else {
-        $TtsPython = $null
-        $InstallName = $null
-    }
-
     if ($TtsEngine -in @("silero", "xvibe")) {
+        $PythonLauncher = Get-Command py -ErrorAction SilentlyContinue
+        if (-not $PythonLauncher) {
+            throw "Для Silero/xVibe нужен Python 3.12 с py.exe. Установи Python 3.12 и повтори запуск."
+        }
+
+        & py -3.12 --version
+        if ($LASTEXITCODE -ne 0) {
+            throw "Python 3.12 не найден. Установи Python 3.12 x64 и включи py launcher."
+        }
+
+        if ($TtsEngine -eq "silero") {
+            $TtsPython = Join-Path $Root "tools\tts-lab\envs\silero\Scripts\python.exe"
+            $Imports = "import torch, soundfile, omegaconf"
+            $InstallName = "silero"
+            $Worker = Join-Path $Root "tools\tts-runtime\silero_worker.py"
+        }
+        else {
+            $TtsPython = Join-Path $Root "tools\tts-lab\vendor\xVibePocketTTS\.venv\Scripts\python.exe"
+            $Imports = "import torch, soundfile, xvibe_pocket_tts"
+            $InstallName = "xvibe"
+            $Worker = Join-Path $Root "tools\tts-runtime\xvibe_worker.py"
+        }
+
         $TtsReady = $false
         if (Test-Path $TtsPython) {
             & $TtsPython -c $Imports *> $null
@@ -159,11 +157,6 @@ if (-not $SkipTts) {
             Write-Host "[OK] Python TTS environment: $TtsEngine"
         }
 
-        $Worker = if ($TtsEngine -eq "silero") {
-            Join-Path $Root "tools\tts-runtime\silero_worker.py"
-        } else {
-            Join-Path $Root "tools\tts-runtime\xvibe_worker.py"
-        }
         if (-not (Test-Path $Worker)) {
             throw "Не найден адаптер TTS: $Worker"
         }
@@ -176,8 +169,10 @@ if (-not $SkipTts) {
             Invoke-SetupScript (Join-Path $Root "tools\tts-lab\Install-TtsLab.ps1") @("-Engine", "piper")
         }
     }
+    elseif ($TtsEngine -eq "sapi") {
+        Write-Host "[INFO] Используется установленный в Windows SAPI voice."
+    }
 }
-
 Write-Host ""
 Write-Host "Все обязательные компоненты проверены. Запускаю помощника." -ForegroundColor Green
 & dotnet run --project $Project --configuration Release -- @AppArguments
