@@ -15,11 +15,15 @@ def emit(payload: dict) -> None:
 
 
 def main() -> int:
+    emit({"status": "Запускаю xVibe worker и загружаю зависимости..."})
     sys.stdout = sys.stderr
     try:
         import soundfile as sf
         from xvibe_pocket_tts import RussianTTS
 
+        sys.stdout = PROTOCOL_OUT
+        emit({"status": "Загружаю веса xVibe и выбранный голос. При первом запуске они скачиваются..."})
+        sys.stdout = sys.stderr
         tts = RussianTTS(device="cpu", auto_accent=True)
     except Exception as exc:
         sys.stdout = PROTOCOL_OUT
