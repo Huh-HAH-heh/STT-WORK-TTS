@@ -80,6 +80,30 @@ try {
     $PublishAssets = Join-Path $PublishDir "assets"
     New-Item -ItemType Directory -Force -Path $PublishAssets | Out-Null
     Copy-Item (Join-Path $Assets "*") $PublishAssets -Recurse -Force
+
+    # Include only startup/install scripts and lightweight TTS adapters.
+    # Python environments, downloaded models and caches are created on first launch.
+    $PortableToolFiles = @(
+        "tools\Start-Assistant.ps1",
+        "tools\Install-VoskModel.ps1",
+        "tools\intent\Install-QwenIntentModel.ps1",
+        "tools\intent\Start-IntentModel.ps1",
+        "tools\tts-lab\Install-TtsLab.ps1",
+        "tools\tts-runtime\silero_worker.py",
+        "tools\tts-runtime\xvibe_worker.py"
+    )
+    foreach ($RelativePath in $PortableToolFiles) {
+        $SourcePath = Join-Path $Root $RelativePath
+        if (-not (Test-Path $SourcePath)) {
+            throw "Required portable startup file is missing: $SourcePath"
+        }
+
+        $DestinationPath = Join-Path $PublishDir $RelativePath
+        $DestinationDirectory = Split-Path $DestinationPath -Parent
+        New-Item -ItemType Directory -Force -Path $DestinationDirectory | Out-Null
+        Copy-Item $SourcePath $DestinationPath -Force
+    }
+
     Copy-Item ".\Start.cmd" $PublishDir -Force
     Copy-Item ".\THIRD_PARTY_NOTICES.md" $PublishDir -Force
     Copy-Item ".\README.md" $PublishDir -Force
