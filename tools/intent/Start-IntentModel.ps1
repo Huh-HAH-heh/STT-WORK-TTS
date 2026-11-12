@@ -24,9 +24,39 @@ function Test-IntentServer {
     }
 }
 
+function Test-PortListening([int]$CheckPort) {
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $pending = $client.BeginConnect("127.0.0.1", $CheckPort, $null, $null)
+        if (-not $pending.AsyncWaitHandle.WaitOne(500)) {
+            return $false
+        }
+        $client.EndConnect($pending)
+        return $true
+    }
+    catch {
+        return $false
+    }
+    finally {
+        $client.Dispose()
+    }
+}
+
 if (Test-IntentServer) {
     Write-Host "Qwen уже запущен: $Endpoint" -ForegroundColor Green
     exit 0
+}
+
+if (Test-PortListening $Port) {
+    Write-Host "Порт $Port уже занят; проверяю, не загружается ли модель..." -ForegroundColor Yellow
+    for ($Attempt = 0; $Attempt -lt 90; $Attempt++) {
+        Start-Sleep -Seconds 2
+        if (Test-IntentServer) {
+            Write-Host "Qwen готов: $Endpoint" -ForegroundColor Green
+            exit 0
+        }
+    }
+    throw "Порт $Port занят, но endpoint $HealthUrl не стал готовым. Не запускаю второй сервер."
 }
 
 if (-not (Test-Path $ModelPath)) {
