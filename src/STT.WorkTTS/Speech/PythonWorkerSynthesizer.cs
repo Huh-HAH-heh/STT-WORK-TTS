@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using STT.WorkTTS.Audio;
 using STT.WorkTTS.Configuration;
+using STT.WorkTTS;
 
 namespace STT.WorkTTS.Speech;
 
@@ -93,11 +94,14 @@ public sealed class PythonWorkerSynthesizer : ISpeechSynthesizer
                 output_path = outputPath
             });
 
+            var workerTimer = Stopwatch.StartNew();
             await _input!.WriteLineAsync(request.AsMemory(), cancellationToken);
             await _input.FlushAsync(cancellationToken);
             requestSent = true;
 
             var responseLine = await _output!.ReadLineAsync(cancellationToken);
+            workerTimer.Stop();
+            PerformanceLog.Record("tts.worker.synthesize_and_write", workerTimer.Elapsed.TotalMilliseconds, $"engine={_engine};voice={_voice}");
             requestSent = false;
             if (string.IsNullOrWhiteSpace(responseLine))
             {
@@ -121,7 +125,10 @@ public sealed class PythonWorkerSynthesizer : ISpeechSynthesizer
                     $"TTS {_engine} сообщил об успехе, но WAV не создан: {outputPath}");
 
             if (_settings.PlayAudio)
-                await AudioPlayer.PlayWavAsync(outputPath, cancellationToken);
+            {
+                using (PerformanceLog.Measure("tts.audio.playback", $"engine={_engine}"))
+                    await AudioPlayer.PlayWavAsync(outputPath, cancellationToken);
+            }
         }
         catch
         {
