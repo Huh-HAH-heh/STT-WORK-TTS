@@ -30,3 +30,10 @@
 - XTTS-v2 weights: Coqui Public Model License (non-commercial use only, including generated audio). The lab asks for confirmation before running XTTS.
 - Piper voice ONNX files have separate model cards; the runtime is GPL-3.0-or-later.
 - Sources and setup instructions: tools/tts-lab/README.md.
+
+## Qwen intent model
+- Model: Qwen3-4B-Instruct-2507, GGUF Q4_K_M.
+- Original model licence: Apache License 2.0.
+- Source: https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507
+- GGUF quantization: https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF
+- Downloaded by tools/intent/Install-QwenIntentModel.ps1 and verified with SHA-256. The model file is not committed or bundled in the portable ZIP.
