@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 
 $Root = Split-Path -Parent $PSScriptRoot
 $Assets = Join-Path $Root "assets"
-$ModelDirectory = Join-Path $Assets ("models\\" + $ModelName)
+$ModelDirectory = Join-Path $Assets ("models\" + $ModelName)
 $Marker = Join-Path $ModelDirectory "conf\model.conf"
 $TempDirectory = Join-Path $Root ".build-temp"
 $PartialArchive = Join-Path $TempDirectory ($ModelName + ".zip.download")
