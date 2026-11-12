@@ -30,7 +30,7 @@
 Нужен .NET 10 SDK и Windows x64. При первой сборке скрипт загрузит модель Vosk, нативный Piper CLI и один голос.
 
 ~~~powershell
-git clone -b feature/csharp-rewrite --single-branch https://github.com/Huh-HAH-heh/STT-WORK-TTS.git
+git clone -b feature/windows-voice-intents --single-branch https://github.com/Huh-HAH-heh/STT-WORK-TTS.git
 cd STT-WORK-TTS
 .\RUN.cmd
 ~~~
@@ -104,12 +104,7 @@ Start.cmd --intent-demo
 
 Если при запуске указать только `--tts xvibe`, автоматически выберется `female_silky`. Если указать только `--tts silero`, выберется `xenia`.
 
-При запуске Start.cmd выбранный runtime проверяется и устанавливается автоматически, если его нет.
-
-~~~powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\tts-lab\\Install-TtsLab.ps1 -Engine silero
-powershell -NoProfile -ExecutionPolicy Bypass -File .\\tools\\tts-lab\\Install-TtsLab.ps1 -Engine xvibe
-~~~
+При запуске Start.cmd выбранный runtime проверяется и устанавливается автоматически, если его нет. Для ручной установки можно вызвать Install-TtsLab.ps1 с параметром -Engine silero или -Engine xvibe.
 
 Python-окружения хранятся в tools/tts-lab и не включаются в Git. При старте помощника выбранный TTS worker заранее загружает модель и держит её в памяти до завершения приложения.
 
