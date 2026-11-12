@@ -47,14 +47,15 @@ def main() -> int:
                 break
 
             text = str(request.get("text", "")).strip()
-            output_path = Path(str(request.get("output_path", "")))
+            output_value = request.get("output_path")
             voice = str(request.get("voice", "xenia")).lower()
             if not text:
                 raise ValueError("Text cannot be empty.")
             if voice not in {"aidar", "baya", "kseniya", "xenia", "eugene"}:
                 raise ValueError(f"Unsupported Silero voice: {voice}")
-            if not str(output_path):
+            if not output_value:
                 raise ValueError("Output path is required.")
+            output_path = Path(str(output_value))
 
             with contextlib.redirect_stdout(sys.stderr):
                 audio = model.apply_tts(text=text, speaker=voice, sample_rate=48000)
