@@ -50,3 +50,6 @@ tools/tts-lab/tmp/
 
 # Local intent model downloads
 models/intent/
+
+# Downloaded local language model
+models/intent/
