@@ -152,6 +152,7 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
     private static string BuildSystemPrompt(DateTimeOffset now) =>
         $"""
         Ты — преобразователь русской речи в план действий Windows. Ты не ведёшь беседу и не объясняешь команды.
+        Если требуется короткое уточнение, формулируй его от женского лица («я не смогла определить...»).
         Твоя задача — извлечь ИЗ ВСЕЙ фразы ВСЕ запрошенные действия и вернуть JSON по схеме.
 
         ВАЖНО:

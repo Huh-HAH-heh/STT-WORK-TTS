@@ -30,7 +30,7 @@ public static class CommandScriptParser
     public static bool TryParse(string text, out IntentPlan plan)
     {
         var commands = new List<(int Position, IntentCommand Command)>();
-        var remainder = text;
+        var recognizedTimerMatches = new List<Match>();
 
         foreach (Match match in TimerPattern.Matches(text))
         {
@@ -45,6 +45,7 @@ public static class CommandScriptParser
             if (seconds is < 1 or > 86400)
                 continue;
 
+            recognizedTimerMatches.Add(match);
             commands.Add((match.Index, new IntentCommand
             {
                 Action = "timer.start",
@@ -82,9 +83,14 @@ public static class CommandScriptParser
 
         // Remove recognized operations, then accept only harmless greeting/filler around them.
         var chars = text.ToCharArray();
-        foreach (var match in TimerPattern.Matches(text).Cast<Match>().Concat(helpMatch.Success ? [helpMatch] : []))
+        foreach (var match in recognizedTimerMatches)
         {
             for (var i = match.Index; i < match.Index + match.Length; i++)
+                chars[i] = ' ';
+        }
+        if (helpMatch.Success)
+        {
+            for (var i = helpMatch.Index; i < helpMatch.Index + helpMatch.Length; i++)
                 chars[i] = ' ';
         }
 
