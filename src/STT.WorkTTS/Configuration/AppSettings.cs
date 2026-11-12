@@ -26,6 +26,8 @@ public sealed class AppSettings
 
         if (allowedVoices.Length > 0 && !allowedVoices.Contains(Tts.Voice, StringComparer.OrdinalIgnoreCase))
             throw new InvalidDataException($"Голос '{Tts.Voice}' не поддерживается движком {Tts.Engine}.");
+        if (Tts.StartupTimeoutSeconds is < 30 or > 3600)
+            throw new InvalidDataException("Tts.StartupTimeoutSeconds должен быть от 30 до 3600 секунд.");
 
         if (Intent.TimeoutSeconds is < 5 or > 120)
             throw new InvalidDataException("Intent.TimeoutSeconds должен быть от 5 до 120.");
@@ -62,6 +64,7 @@ public sealed class TtsSettings
 {
     public string Engine { get; set; } = "Silero";
     public string Voice { get; set; } = "xenia";
+    public int StartupTimeoutSeconds { get; set; } = 1200;
     public string SileroPythonExecutable { get; set; } = "tools/tts-lab/envs/silero/Scripts/python.exe";
     public string SileroWorkerScript { get; set; } = "tools/tts-runtime/silero_worker.py";
     public string XvibePythonExecutable { get; set; } = "tools/tts-lab/vendor/xVibePocketTTS/.venv/Scripts/python.exe";
