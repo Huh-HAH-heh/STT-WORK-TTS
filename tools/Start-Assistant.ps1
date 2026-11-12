@@ -88,8 +88,15 @@ if (-not $UsePortable -and -not (Get-Command dotnet -ErrorAction SilentlyContinu
 $Settings = Get-Content -Raw -Path $SettingsPath | ConvertFrom-Json
 
 if (-not $IntentDemo) {
-    $VoskMarker = Join-Path $Root "assets\models\vosk-model-small-ru-0.22\conf\model.conf"
-    if (-not (Test-Path $VoskMarker)) {
+    $VoskModelDirectory = Join-Path $Root "assets\models\vosk-model-small-ru-0.22"
+    $VoskMarker = Join-Path $VoskModelDirectory "conf\model.conf"
+    $VoskAcousticModel = Join-Path $VoskModelDirectory "am\final.mdl"
+    $VoskValid = (Test-Path $VoskMarker) -and (Test-Path $VoskAcousticModel)
+    if ($VoskValid) {
+        $VoskValid = (Get-Item $VoskAcousticModel).Length -gt 1000000
+    }
+
+    if (-not $VoskValid) {
         Write-Step "Русская модель STT Vosk отсутствует — устанавливаю"
         Invoke-SetupScript (Join-Path $Root "tools\Install-VoskModel.ps1")
     }
