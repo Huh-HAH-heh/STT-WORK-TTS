@@ -22,9 +22,13 @@
 - SAPI is a Windows system speech API. Voices are installed separately by the user and are not bundled in this application.
 - RHVoice voice packages have their own licenses and distribution conditions: https://github.com/RHVoice/RHVoice
 
-## Experimental TTS Lab
+## Selected local TTS engines
+- Main voice: Silero TTS v5.6, Russian speakers (default: xenia). The project uses the upstream PyTorch Hub model; verify upstream code, model and speaker resource terms before redistribution.
+- Backup voice: xVibePocketTTS (default: female_silky). The upstream project code is MIT; Pocket TTS base weights and other voice/data resources have separate terms. See the upstream NOTICE and model cards.
+- The C# application communicates with long-lived local Python adapter processes. Python environments and downloaded model weights are installed separately under tools/tts-lab and are not committed to Git or included in the portable archive.
+
+## Other experimental TTS Lab engines
 - The optional lab under tools/tts-lab does not bundle third-party models or runtimes in Git or in the portable application archive.
-- xVibePocketTTS code: MIT. Pocket TTS base weights and other voice/data resources have separate terms; see the upstream NOTICE and model cards.
 - Silero code and model terms must be checked for the selected model family and voice before redistribution.
 - Vosk-TTS code: Apache License 2.0. The downloaded Russian model is a separate asset with its own terms.
 - XTTS-v2 weights: Coqui Public Model License (non-commercial use only, including generated audio). The lab asks for confirmation before running XTTS.
