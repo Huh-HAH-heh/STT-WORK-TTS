@@ -22,7 +22,9 @@
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\intent\Install-QwenIntentModel.ps1
 ~~~
 
-Модель появится в папке models/intent.
+Модель появится в папке models/intent. Установщик использует curl.exe, скачивает файл с поддержкой Range/resume, повторяет неудачные попытки и проверяет SHA-256 по закреплённой ревизии Hugging Face.
+
+Если подключение оборвалось, не удаляй файл с расширением .download. Просто повтори ту же команду установки: загрузчик продолжит с сохранённого места.
 
 ## Запуск сервера
 
