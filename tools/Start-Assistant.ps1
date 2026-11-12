@@ -2,6 +2,19 @@
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $AppArguments = @($args | ForEach-Object { [string]$_ })
 
+$Project = Join-Path $Root "src\STT.WorkTTS\STT.WorkTTS.csproj"
+$PortableExe = Join-Path $Root "STT.WorkTTS.exe"
+$UsePortable = $false
+
+if (-not (Test-Path $Project)) {
+    if (Test-Path $PortableExe) {
+        $UsePortable = $true
+    }
+    else {
+        throw "Не найден ни исходный проект, ни portable EXE в $Root."
+    }
+}
+
 function Write-Step([string]$Message) {
     Write-Host ""
     Write-Host "== $Message ==" -ForegroundColor Cyan
@@ -10,7 +23,7 @@ function Write-Step([string]$Message) {
 function Invoke-SetupScript([string]$Path, [string[]]$Arguments = @()) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Path @Arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "Подготовка завершилась с кодом ${LASTEXITCODE}: $Path"
+        throw "Подготовка завершилась с кодом \${LASTEXITCODE}: $Path"
     }
 }
 
@@ -42,29 +55,36 @@ if ($TtsEngine -notin @("silero", "xvibe", "piper", "sapi")) {
     throw "Неизвестный TTS '$TtsEngine'. Доступны silero и xvibe."
 }
 
+if ($UsePortable) {
+    $SettingsPath = Join-Path $Root "appsettings.json"
+}
+else {
+    $SettingsPath = Join-Path $Root "src\STT.WorkTTS\appsettings.json"
+}
+
+if (-not (Test-Path $SettingsPath)) {
+    throw "Не найден файл настроек: $SettingsPath"
+}
+
 if ($ListVoices) {
-    $Project = Join-Path $Root "src\STT.WorkTTS\STT.WorkTTS.csproj"
-    & dotnet run --project $Project --configuration Release -- @AppArguments
+    if ($UsePortable) {
+        & $PortableExe @AppArguments
+    }
+    else {
+        if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+            throw "Не найден .NET SDK. Установи .NET 10 SDK."
+        }
+        & dotnet run --project $Project --configuration Release -- @AppArguments
+    }
     exit $LASTEXITCODE
 }
 
 Write-Host "STT Work TTS — проверка локальных компонентов" -ForegroundColor Cyan
 
-$Project = Join-Path $Root "src\STT.WorkTTS\STT.WorkTTS.csproj"
-if (-not (Test-Path $Project)) {
-    $PortableExe = Join-Path $Root "STT.WorkTTS.exe"
-    if (Test-Path $PortableExe) {
-        & $PortableExe @AppArguments
-        exit $LASTEXITCODE
-    }
-    throw "Не найден проект приложения: $Project"
-}
-
-if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
+if (-not $UsePortable -and -not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
     throw "Не найден .NET SDK. Установи .NET 10 SDK."
 }
 
-$SettingsPath = Join-Path $Root "src\STT.WorkTTS\appsettings.json"
 $Settings = Get-Content -Raw -Path $SettingsPath | ConvertFrom-Json
 
 if (-not $IntentDemo) {
@@ -79,7 +99,6 @@ if (-not $IntentDemo) {
 }
 
 if ($Settings.Intent.Enabled) {
-    $IntentModel = Join-Path $Root "models\intent\Qwen3-4B-Instruct-2507-Q4_K_M.gguf"
     Write-Step "Проверяю наличие и SHA-256 модели Qwen"
     Invoke-SetupScript (Join-Path $Root "tools\intent\Install-QwenIntentModel.ps1")
 
@@ -173,7 +192,13 @@ if (-not $SkipTts) {
         Write-Host "[INFO] Используется установленный в Windows SAPI voice."
     }
 }
+
 Write-Host ""
 Write-Host "Все обязательные компоненты проверены. Запускаю помощника." -ForegroundColor Green
-& dotnet run --project $Project --configuration Release -- @AppArguments
+if ($UsePortable) {
+    & $PortableExe @AppArguments
+}
+else {
+    & dotnet run --project $Project --configuration Release -- @AppArguments
+}
 exit $LASTEXITCODE
