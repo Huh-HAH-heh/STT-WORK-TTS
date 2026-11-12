@@ -23,13 +23,22 @@ def main() -> int:
         import torch
 
         torch.set_num_threads(max(1, min(6, os.cpu_count() or 2)))
-        model, _ = torch.hub.load(
-            repo_or_dir="snakers4/silero-models",
-            model="silero_tts",
-            language="ru",
-            speaker="v5_6_ru",
-            trust_repo=True,
-        )
+        hub_args = {
+            "repo_or_dir": "snakers4/silero-models",
+            "model": "silero_tts",
+            "language": "ru",
+            "speaker": "v5_6_ru",
+            "trust_repo": True,
+        }
+        try:
+            model, _ = torch.hub.load(**hub_args)
+        except AssertionError as exc:
+            # An older cached torch.hub checkout may have a stale models.yml
+            # that predates v5_6_ru. Refresh that checkout once, then retry.
+            if "v5_6_ru" not in str(exc):
+                raise
+            print("Обновляю локальный кэш Silero Hub: в нём отсутствует v5_6_ru.", file=sys.stderr)
+            model, _ = torch.hub.load(**hub_args, force_reload=True)
         model.to(torch.device("cpu"))
     except Exception as exc:
         sys.stdout = PROTOCOL_OUT
