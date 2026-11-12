@@ -69,6 +69,13 @@ internal static class Program
                 ? new NeuralCommandProcessor(interpreter, executor, localProcessor)
                 : localProcessor;
             using var synthesizer = SpeechSynthesizerFactory.Create(settings.Tts, appDirectory);
+            if (synthesizer is PythonWorkerSynthesizer pythonTts)
+            {
+                Console.WriteLine($"Загружаю TTS: {settings.Tts.Engine} / {settings.Tts.Voice}...");
+                await pythonTts.WarmUpAsync();
+                Console.WriteLine("Голосовой движок готов.");
+            }
+
             var pipeline = new SpeechPipeline(recognizer, processor);
 
             Console.WriteLine();
