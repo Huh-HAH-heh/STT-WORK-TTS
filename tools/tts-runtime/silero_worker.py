@@ -16,13 +16,17 @@ def emit(payload: dict) -> None:
 
 
 def main() -> int:
-    # Keep all library output away from stdout: stdout is a JSON-lines protocol.
+    # Report progress before importing PyTorch; imports and model downloads can take time.
+    emit({"status": "Запускаю Silero worker и загружаю зависимости PyTorch..."})
     sys.stdout = sys.stderr
     try:
         import soundfile as sf
         import torch
 
         torch.set_num_threads(max(1, min(6, os.cpu_count() or 2)))
+        sys.stdout = PROTOCOL_OUT
+        emit({"status": "Загружаю Silero v5_6_ru. При первом запуске скачиваются веса модели..."})
+        sys.stdout = sys.stderr
         hub_args = {
             "repo_or_dir": "snakers4/silero-models",
             "model": "silero_tts",
@@ -35,7 +39,9 @@ def main() -> int:
         except AssertionError:
             # Cached torch.hub repositories can contain an older models.yml.
             # Refresh the checkout once; if the model still cannot load, surface the real error.
-            print("Обновляю устаревший кэш Silero Hub и повторяю загрузку.", file=sys.stderr)
+            sys.stdout = PROTOCOL_OUT
+            emit({"status": "Обнаружен устаревший кэш. Обновляю Silero Hub и повторяю загрузку..."})
+            sys.stdout = sys.stderr
             model, _ = torch.hub.load(**hub_args, force_reload=True)
         model.to(torch.device("cpu"))
     except Exception as exc:
