@@ -50,7 +50,11 @@ public sealed class SapiSynthesizer : ISpeechSynthesizer
 public static class SpeechSynthesizerFactory
 {
     public static ISpeechSynthesizer Create(TtsSettings settings, string appDirectory) =>
-        settings.Engine.Equals("Sapi", StringComparison.OrdinalIgnoreCase)
-            ? new SapiSynthesizer(settings)
-            : new PiperCliSynthesizer(settings, appDirectory);
+        settings.Engine.ToLowerInvariant() switch
+        {
+            "silero" or "xvibe" => new PythonWorkerSynthesizer(settings, appDirectory),
+            "sapi" => new SapiSynthesizer(settings),
+            "piper" => new PiperCliSynthesizer(settings, appDirectory),
+            _ => throw new InvalidOperationException($"Неизвестный TTS-движок: {settings.Engine}")
+        };
 }
