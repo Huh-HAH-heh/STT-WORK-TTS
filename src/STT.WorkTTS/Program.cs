@@ -66,10 +66,18 @@ internal static class Program
             using var recognizer = LoadVoskRecognizer(settings.Stt, appDirectory);
             var localProcessor = new LocalCommandProcessor(settings.Work, appDirectory);
             using var timers = CreateTimerService();
-            using var interpreter = new LlamaCppIntentInterpreter(settings.Intent);
+            using var fastInterpreter = new LlamaCppIntentInterpreter(settings.Intent);
+            using var heavyInterpreter = new LlamaCppIntentInterpreter(settings.Generation.ToIntentSettings());
+            using var textGenerator = new LlamaCppTextGenerator(settings.Generation, appDirectory);
             var executor = new WindowsActionExecutor(timers);
             ICommandProcessor processor = settings.Intent.Enabled
-                ? new NeuralCommandProcessor(interpreter, executor, localProcessor)
+                ? new NeuralCommandProcessor(
+                    fastInterpreter,
+                    heavyInterpreter,
+                    textGenerator,
+                    executor,
+                    localProcessor,
+                    appDirectory)
                 : localProcessor;
             using var synthesizer = SpeechSynthesizerFactory.Create(settings.Tts, appDirectory);
             if (synthesizer is PythonWorkerSynthesizer pythonTts)
@@ -92,8 +100,11 @@ internal static class Program
                 ? "Синтез отключён: режим проверки микрофона и STT."
                 : $"Синтез: {settings.Tts.Engine} / {settings.Tts.Voice}.");
             Console.WriteLine(settings.Intent.Enabled
-                ? $"Понимание команд: локальная нейросеть ({settings.Intent.ModelAlias}) — {settings.Intent.Endpoint}."
+                ? $"Быстрое понимание: {settings.Intent.ModelAlias} — {settings.Intent.Endpoint}."
                 : "Понимание команд: локальные правила.");
+            Console.WriteLine(settings.Generation.Enabled
+                ? $"Qwen 4B для сложных запросов и текста: {settings.Generation.Endpoint} (запуск по требованию)."
+                : "Генерация Qwen 4B отключена.");
             if (sttDemo)
                 Console.WriteLine("Режим --stt-demo: ответ выводится в консоль, без озвучивания.");
             Console.WriteLine("STT и LLM работают локально; облачные API не используются.");
@@ -239,12 +250,17 @@ internal static class Program
     private static async Task<int> RunIntentDemo(AppSettings settings)
     {
         using var timers = CreateTimerService();
-        using var interpreter = new LlamaCppIntentInterpreter(settings.Intent);
+        using var fastInterpreter = new LlamaCppIntentInterpreter(settings.Intent);
+        using var heavyInterpreter = new LlamaCppIntentInterpreter(settings.Generation.ToIntentSettings());
+        using var textGenerator = new LlamaCppTextGenerator(settings.Generation, AppContext.BaseDirectory);
         var local = new LocalCommandProcessor(settings.Work, AppContext.BaseDirectory);
         var processor = new NeuralCommandProcessor(
-            interpreter,
+            fastInterpreter,
+            heavyInterpreter,
+            textGenerator,
             new WindowsActionExecutor(timers),
-            local);
+            local,
+            AppContext.BaseDirectory);
 
         Console.WriteLine("Тест нейросетевого понимания команд. Микрофон, Vosk и TTS не используются.");
         Console.WriteLine("Вводи фразы на русском; q — выход.");

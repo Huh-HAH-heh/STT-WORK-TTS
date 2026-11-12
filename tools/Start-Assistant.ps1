@@ -133,18 +133,18 @@ if (-not $IntentDemo) {
 }
 
 if ($Settings.Intent.Enabled) {
-    Write-Step "Проверяю наличие и SHA-256 модели Qwen"
-    Invoke-SetupScript (Join-Path $Root "tools\intent\Install-QwenIntentModel.ps1")
+    Write-Step "Проверяю компактную модель Qwen3-0.6B для команд"
+    Invoke-SetupScript (Join-Path $Root "tools\\intent\\Install-FastIntentModel.ps1")
 
     $IntentEndpoint = [Uri]$Settings.Intent.Endpoint
     $HealthUrl = "$($IntentEndpoint.Scheme)://$($IntentEndpoint.Authority)/health"
     if (Test-HttpHealth $HealthUrl) {
-        Write-Host "[OK] llama-server отвечает: $HealthUrl" -ForegroundColor Green
+        Write-Host "[OK] Быстрая модель отвечает: $HealthUrl" -ForegroundColor Green
     }
     elseif (Test-TcpPort $IntentEndpoint.Port) {
-        Write-Step "llama-server уже занимает порт, жду завершения загрузки модели"
+        Write-Step "Порт быстрой модели занят, жду её загрузки"
         $ServerReady = $false
-        for ($Attempt = 0; $Attempt -lt 90; $Attempt++) {
+        for ($Attempt = 0; $Attempt -lt 60; $Attempt++) {
             Start-Sleep -Seconds 2
             if (Test-HttpHealth $HealthUrl) {
                 $ServerReady = $true
@@ -152,22 +152,20 @@ if ($Settings.Intent.Enabled) {
             }
         }
         if (-not $ServerReady) {
-            throw "Порт $($IntentEndpoint.Port) уже занят, но llama-server не стал готов. Проверь data\logs и процесс, занявший порт."
+            throw "Порт $($IntentEndpoint.Port) занят, но быстрая модель не стала готовой. Проверь data\\logs."
         }
-        Write-Host "[OK] llama-server готов: $HealthUrl" -ForegroundColor Green
+        Write-Host "[OK] Быстрая модель готова: $HealthUrl" -ForegroundColor Green
     }
     else {
-        $ServerPath = Join-Path $env:USERPROFILE ".docker\bin\inference\llama-server.exe"
+        $ServerPath = Join-Path $env:USERPROFILE ".docker\\bin\\inference\\llama-server.exe"
         $ServerCommand = Get-Command "llama-server.exe" -ErrorAction SilentlyContinue
-        if ($ServerCommand) {
-            $ServerPath = $ServerCommand.Source
-        }
+        if ($ServerCommand) { $ServerPath = $ServerCommand.Source }
         if (-not (Test-Path $ServerPath)) {
-            throw "Qwen-сервер не запущен, а llama-server.exe не найден. Ожидаемый путь: $ServerPath"
+            throw "Не найден llama-server.exe. Ожидаемый путь: $ServerPath"
         }
 
-        Write-Step "Qwen не запущен — поднимаю llama-server"
-        Invoke-SetupScript (Join-Path $Root "tools\intent\Start-IntentModel.ps1") @(
+        Write-Step "Запускаю быструю модель Qwen3-0.6B"
+        Invoke-SetupScript (Join-Path $Root "tools\\intent\\Start-FastIntentModel.ps1") @(
             "-ServerPath", $ServerPath,
             "-Port", $IntentEndpoint.Port.ToString(),
             "-Background"
@@ -176,6 +174,19 @@ if ($Settings.Intent.Enabled) {
 }
 else {
     Write-Host "[OK] Intent router выключен в appsettings.json"
+}
+
+if ($Settings.Generation.Enabled) {
+    Write-Step "Проверяю большую модель Qwen3-4B для генерации текста"
+    Invoke-SetupScript (Join-Path $Root "tools\\intent\\Install-QwenIntentModel.ps1")
+    $GenerationEndpoint = [Uri]$Settings.Generation.Endpoint
+    $GenerationHealthUrl = "$($GenerationEndpoint.Scheme)://$($GenerationEndpoint.Authority)/health"
+    if (Test-HttpHealth $GenerationHealthUrl) {
+        Write-Host "[OK] Сервер Qwen 4B уже запущен: $GenerationHealthUrl" -ForegroundColor Green
+    }
+    else {
+        Write-Host "[OK] Веса Qwen 4B установлены; сервер запустится при первом сложном запросе или генерации текста." -ForegroundColor Green
+    }
 }
 
 if (-not $SkipTts) {
