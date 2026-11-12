@@ -37,6 +37,24 @@ function Test-HttpHealth([string]$Url) {
     }
 }
 
+function Test-TcpPort([int]$Port) {
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $pending = $client.BeginConnect("127.0.0.1", $Port, $null, $null)
+        if (-not $pending.AsyncWaitHandle.WaitOne(500)) {
+            return $false
+        }
+        $client.EndConnect($pending)
+        return $true
+    }
+    catch {
+        return $false
+    }
+    finally {
+        $client.Dispose()
+    }
+}
+
 $IntentDemo = $AppArguments -contains "--intent-demo"
 $SttDemo = $AppArguments -contains "--stt-demo"
 $ListVoices = $AppArguments -contains "--list-voices"
@@ -122,6 +140,21 @@ if ($Settings.Intent.Enabled) {
     $HealthUrl = "$($IntentEndpoint.Scheme)://$($IntentEndpoint.Authority)/health"
     if (Test-HttpHealth $HealthUrl) {
         Write-Host "[OK] llama-server отвечает: $HealthUrl" -ForegroundColor Green
+    }
+    elseif (Test-TcpPort $IntentEndpoint.Port) {
+        Write-Step "llama-server уже занимает порт, жду завершения загрузки модели"
+        $ServerReady = $false
+        for ($Attempt = 0; $Attempt -lt 90; $Attempt++) {
+            Start-Sleep -Seconds 2
+            if (Test-HttpHealth $HealthUrl) {
+                $ServerReady = $true
+                break
+            }
+        }
+        if (-not $ServerReady) {
+            throw "Порт $($IntentEndpoint.Port) уже занят, но llama-server не стал готов. Проверь data\logs и процесс, занявший порт."
+        }
+        Write-Host "[OK] llama-server готов: $HealthUrl" -ForegroundColor Green
     }
     else {
         $ServerPath = Join-Path $env:USERPROFILE ".docker\bin\inference\llama-server.exe"
