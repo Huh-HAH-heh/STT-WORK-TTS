@@ -27,16 +27,25 @@ AMD RX 7600 не используется этими скриптами как C
 
 ## Установка
 
-Из корня репозитория:
+Перед установкой проверь Python 3.12 и Git:
 
 ~~~powershell
-powershell -ExecutionPolicy Bypass -File .\tools\tts-lab\Install-TtsLab.ps1
+py -3.12 --version
+git --version
 ~~~
 
-Установить только один движок:
+Из корня репозитория установи все кандидаты:
 
 ~~~powershell
-powershell -ExecutionPolicy Bypass -File .\tools\tts-lab\Install-TtsLab.ps1 -Engine silero
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\tts-lab\Install-TtsLab.ps1
+~~~
+
+Установка создаёт отдельные Python-окружения и скачивает модели. Это может занять несколько гигабайт. Если один движок не установится, скрипт продолжит установку остальных и выведет список ошибок; уже установленные движки останутся доступны.
+
+Установить только один движок можно так:
+
+~~~powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\tts-lab\Install-TtsLab.ps1 -Engine silero
 ~~~
 
 Допустимые значения Engine: all, piper, xvibe, silero, vosk, xtts.
@@ -45,10 +54,10 @@ powershell -ExecutionPolicy Bypass -File .\tools\tts-lab\Install-TtsLab.ps1 -Eng
 
 ## Прослушивание
 
-Запусти:
+Из корня репозитория запусти:
 
-~~~cmd
-tools\tts-lab\TtsLab.cmd
+~~~powershell
+.\tools\tts-lab\TtsLab.cmd
 ~~~
 
 Лаборатория сгенерирует один и тот же текст для всех доступных голосов, затем по очереди воспроизведёт WAV. После каждого голоса можно поставить оценку от 1 до 5 и оставить комментарий.
@@ -93,4 +102,6 @@ powershell -ExecutionPolicy Bypass -File .\tools\tts-lab\Run-TtsLab.ps1 -Text "�
 4. Скорость генерации и задержка до начала речи.
 5. Размер модели, потребление RAM и возможность работы на CPU.
 
-Оценка в CSV субъективна. Для более строгого теста используй одинаковый текст, одну громкость и несколько повторов, а не только одну удачную фразу.
+Оценка в CSV субъективна. Для выбора оцени не только тембр, но и ударения, произношение чисел, естественность пауз, скорость синтеза и задержку до первой фразы.
+
+Важно: это отдельный стенд сравнения. После выбора движка и конкретного голоса его ещё нужно подключить к основному приложению — TTS Lab не меняет appsettings и не переключает голосовой конвейер автоматически.
