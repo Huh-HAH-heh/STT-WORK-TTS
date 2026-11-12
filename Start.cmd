@@ -2,14 +2,15 @@
 setlocal
 cd /d "%~dp0"
 
-if exist "%~dp0tools\Start-Assistant.ps1" (
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\Start-Assistant.ps1" %*
-    set "APP_EXIT=%ERRORLEVEL%"
-    if not "%APP_EXIT%"=="0" echo Startup failed with exit code %APP_EXIT%.
-    if not "%APP_EXIT%"=="0" pause
-    endlocal & exit /b %APP_EXIT%
-)
+if not exist "%~dp0tools\Start-Assistant.ps1" goto :portable
 
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0tools\Start-Assistant.ps1" %*
+set "APP_EXIT=%ERRORLEVEL%"
+if not "%APP_EXIT%"=="0" echo Startup failed with exit code %APP_EXIT%.
+if not "%APP_EXIT%"=="0" pause
+endlocal & exit /b %APP_EXIT%
+
+:portable
 if exist "%~dp0STT.WorkTTS.exe" (
     "%~dp0STT.WorkTTS.exe" %*
     goto :end
