@@ -4,7 +4,7 @@ using STT.WorkTTS.Configuration;
 
 namespace STT.WorkTTS.Processing;
 
-public sealed class LocalCommandProcessor
+public sealed class LocalCommandProcessor : ICommandProcessor
 {
     private readonly List<string> _notes = [];
     private readonly bool _saveNotes;
@@ -22,6 +22,14 @@ public sealed class LocalCommandProcessor
                     .Select(line => line.Trim())
                     .Where(line => line.Length > 0));
         }
+    }
+
+    public Task<CommandResult> ProcessAsync(
+        string text,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(Process(text));
     }
 
     public CommandResult Process(string text)
