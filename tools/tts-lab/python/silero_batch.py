@@ -28,10 +28,8 @@ def main() -> int:
     }
     try:
         model, _ = torch.hub.load(**hub_args)
-    except AssertionError as exc:
-        if "v5_6_ru" not in str(exc):
-            raise
-        print("Refreshing stale Silero Hub cache (missing v5_6_ru)...")
+    except AssertionError:
+        print("Refreshing stale Silero Hub cache...")
         model, _ = torch.hub.load(**hub_args, force_reload=True)
     model.to(torch.device("cpu"))
     for voice in args.voices:
