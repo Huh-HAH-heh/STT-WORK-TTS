@@ -25,6 +25,10 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
         if (string.IsNullOrWhiteSpace(text))
             return new CommandResult("Не удалось распознать речь. Повтори, пожалуйста.");
 
+        // Capability questions are a deterministic help script, not an ambiguous OS command.
+        if (LocalCommandProcessor.IsCapabilityRequest(text))
+            return _localFallback.Process(text);
+
         IntentCommand intent;
         try
         {
