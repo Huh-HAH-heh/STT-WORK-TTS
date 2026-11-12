@@ -8,18 +8,20 @@ public sealed record PipelineResult(string Transcription, string Answer, string?
 public sealed class SpeechPipeline
 {
     private readonly VoskRecognizer _recognizer;
-    private readonly LocalCommandProcessor _processor;
+    private readonly ICommandProcessor _processor;
 
-    public SpeechPipeline(VoskRecognizer recognizer, LocalCommandProcessor processor)
+    public SpeechPipeline(VoskRecognizer recognizer, ICommandProcessor processor)
     {
         _recognizer = recognizer;
         _processor = processor;
     }
 
-    public PipelineResult Process(AudioClip clip)
+    public async Task<PipelineResult> ProcessAsync(
+        AudioClip clip,
+        CancellationToken cancellationToken = default)
     {
         var transcription = _recognizer.Transcribe(clip);
-        var commandResult = _processor.Process(transcription);
+        var commandResult = await _processor.ProcessAsync(transcription, cancellationToken);
         return new PipelineResult(transcription, commandResult.Answer, commandResult.Warning);
     }
 }
