@@ -48,10 +48,10 @@ public sealed class TimerService : IDisposable
 
             if (!_active.Remove(id, out source))
                 return false;
-        }
 
-        source.Cancel();
-        return true;
+            source.Cancel();
+            return true;
+        }
     }
 
     public int ActiveCount
@@ -93,10 +93,9 @@ public sealed class TimerService : IDisposable
 
             _disposed = true;
             sources = _active.Values.ToList();
+            foreach (var source in sources)
+                source.Cancel();
             _active.Clear();
         }
-
-        foreach (var source in sources)
-            source.Cancel();
     }
 }
