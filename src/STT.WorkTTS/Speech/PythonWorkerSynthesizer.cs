@@ -87,6 +87,7 @@ public sealed class PythonWorkerSynthesizer : ISpeechSynthesizer
             requestSent = true;
 
             var responseLine = await _output!.ReadLineAsync(cancellationToken);
+            requestSent = false;
             if (string.IsNullOrWhiteSpace(responseLine))
             {
                 var detail = await GetWorkerErrorAsync();
@@ -151,8 +152,6 @@ public sealed class PythonWorkerSynthesizer : ISpeechSynthesizer
             CreateNoWindow = true
         };
         startInfo.ArgumentList.Add(_workerScript);
-        startInfo.ArgumentList.Add("--voice");
-        startInfo.ArgumentList.Add(_voice);
         startInfo.Environment["PYTHONIOENCODING"] = "utf-8";
         startInfo.Environment["PYTHONUNBUFFERED"] = "1";
 
