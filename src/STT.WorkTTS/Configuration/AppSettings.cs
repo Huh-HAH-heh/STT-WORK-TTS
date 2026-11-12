@@ -7,6 +7,7 @@ public sealed class AppSettings
     public WorkSettings Work { get; set; } = new();
     public TtsSettings Tts { get; set; } = new();
     public IntentSettings Intent { get; set; } = new();
+    public TextGenerationSettings Generation { get; set; } = new();
 
     public void Validate()
     {
@@ -37,6 +38,26 @@ public sealed class AppSettings
             throw new InvalidDataException("Intent.Endpoint должен указывать на локальный HTTP-сервер (127.0.0.1 или localhost).");
         if (string.IsNullOrWhiteSpace(Intent.ModelAlias))
             throw new InvalidDataException("Intent.ModelAlias не может быть пустым.");
+
+        if (Generation.TimeoutSeconds is < 5 or > 600)
+            throw new InvalidDataException("Generation.TimeoutSeconds должен быть от 5 до 600.");
+        if (Generation.StartupTimeoutSeconds is < 30 or > 600)
+            throw new InvalidDataException("Generation.StartupTimeoutSeconds должен быть от 30 до 600.");
+        if (Generation.MaxAnswerTokens is < 32 or > 2048)
+            throw new InvalidDataException("Generation.MaxAnswerTokens должен быть от 32 до 2048.");
+        if (Generation.MaxDocumentTokens is < 128 or > 8192)
+            throw new InvalidDataException("Generation.MaxDocumentTokens должен быть от 128 до 8192.");
+        if (!Uri.TryCreate(Generation.Endpoint, UriKind.Absolute, out var generationEndpoint)
+            || generationEndpoint.Scheme != Uri.UriSchemeHttp
+            || !generationEndpoint.IsLoopback)
+            throw new InvalidDataException("Generation.Endpoint должен указывать на локальный HTTP-сервер.");
+        if (string.IsNullOrWhiteSpace(Generation.ModelAlias)
+            || string.IsNullOrWhiteSpace(Generation.ModelPath)
+            || string.IsNullOrWhiteSpace(Generation.StartupScript)
+            || string.IsNullOrWhiteSpace(Generation.ServerPath))
+            throw new InvalidDataException("Generation: ModelAlias, ModelPath, StartupScript и ServerPath обязательны.");
+        if (string.Equals(Intent.Endpoint, Generation.Endpoint, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidDataException("Intent.Endpoint и Generation.Endpoint должны использовать разные порты.");
     }
 }
 
@@ -79,9 +100,32 @@ public sealed class TtsSettings
 public sealed class IntentSettings
 {
     public bool Enabled { get; set; } = true;
+    public string Endpoint { get; set; } = "http://127.0.0.1:8083/v1/chat/completions";
+    public string ModelAlias { get; set; } = "stt-fast-intent";
+    public int TimeoutSeconds { get; set; } = 20;
+}
+
+public sealed class TextGenerationSettings
+{
+    public bool Enabled { get; set; } = true;
     public string Endpoint { get; set; } = "http://127.0.0.1:8082/v1/chat/completions";
     public string ModelAlias { get; set; } = "stt-intent";
-    public int TimeoutSeconds { get; set; } = 30;
+    public int TimeoutSeconds { get; set; } = 240;
+    public int StartupTimeoutSeconds { get; set; } = 180;
+    public string ModelPath { get; set; } = "models/intent/Qwen3-4B-Instruct-2507-Q4_K_M.gguf";
+    public string StartupScript { get; set; } = "tools/intent/Start-IntentModel.ps1";
+    public string ServerPath { get; set; } = "%USERPROFILE%\\.docker\\bin\\inference\\llama-server.exe";
+    public int MaxAnswerTokens { get; set; } = 384;
+    public int MaxDocumentTokens { get; set; } = 2048;
+    public bool OpenGeneratedText { get; set; } = true;
+
+    public IntentSettings ToIntentSettings() => new()
+    {
+        Enabled = Enabled,
+        Endpoint = Endpoint,
+        ModelAlias = ModelAlias,
+        TimeoutSeconds = Math.Clamp(TimeoutSeconds, 5, 120)
+    };
 }
 
 public static class AppPaths

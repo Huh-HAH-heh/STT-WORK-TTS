@@ -29,6 +29,7 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
                   "audio.set_volume", "audio.adjust_volume", "audio.mute", "audio.unmute",
                   "system.lock",
                   "assistant.list_capabilities", "assistant.greeting",
+                  "assistant.answer", "assistant.generate_text",
                   "unknown", "clarify"
                 ]
               },
@@ -45,11 +46,12 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
                   },
                   "url": { "type": ["string", "null"] },
                   "volume_percent": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
-                  "volume_delta": { "type": ["integer", "null"], "minimum": -100, "maximum": 100 }
+                  "volume_delta": { "type": ["integer", "null"], "minimum": -100, "maximum": 100 },
+                  "text_prompt": { "type": ["string", "null"] }
                 },
                 "required": [
                   "duration_seconds", "label", "timer_id", "app_id",
-                  "url", "volume_percent", "volume_delta"
+                  "url", "volume_percent", "volume_delta", "text_prompt"
                 ]
               },
               "clarification": { "type": ["string", "null"] }
@@ -151,48 +153,36 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
 
     private static string BuildSystemPrompt(DateTimeOffset now) =>
         $"""
-        Ты — преобразователь русской речи в план действий Windows. Ты не ведёшь беседу и не объясняешь команды.
-        Если требуется короткое уточнение, формулируй его от женского лица («я не смогла определить...»).
-        Твоя задача — извлечь ИЗ ВСЕЙ фразы ВСЕ запрошенные действия и вернуть JSON по схеме.
+        Ты — быстрый маршрутизатор русских голосовых команд Windows. Не общайся и не выполняй действия сам.
+        Извлеки ВСЕ просьбы пользователя по порядку и верни только JSON по схеме. Без рассуждений и Markdown.
 
-        ВАЖНО:
-        - Поле actions — массив действий в исходном порядке. Не ограничивайся первым действием.
-        - Каждое отдельное действие пользователя — отдельный элемент массива.
-        - Не объединяй и не теряй повторные команды. Два таймера — это два timer.start.
-        - Слова приветствия, «как дела», вежливые слова и связки не являются действиями: игнорируй их и продолжай разбор.
-        - Запрос перечислить команды/функции/возможности добавляй как assistant.list_capabilities, даже вместе с другими действиями.
-        - Если фраза содержит несколько независимых просьб, верни их все.
-        - Не выдавай clarify только из-за разговорной формы или ошибки распознавания.
-        - Заполняй известные аргументы. Неизвестный необязательный аргумент оставляй null.
-        - Если одна просьба непонятна, сохрани остальные распознанные действия и добавь одну короткую clarification.
-        - Если действий нет, верни пустой actions и clarification=null; не превращай обычное приветствие в уточняющий вопрос.
+        Правила:
+        - actions — массив отдельных действий, максимум 8. Не теряй повторные и составные просьбы.
+        - Заполняй только известные аргументы; неизвестные значения — null.
+        - Не выдумывай новые Windows-вызовы. Неподдерживаемую системную команду отмечай unknown.
+        - Короткое уточнение — только когда без него нельзя выбрать действие.
+        - Для обычного приветствия используй assistant.greeting; для списка возможностей — assistant.list_capabilities.
 
-        Локальное время ПК: {now:yyyy-MM-dd HH:mm:ss zzz}.
-        Часовой пояс: {TimeZoneInfo.Local.Id}.
+        Маршрутизация:
+        - Вопрос, просьба объяснить/рассказать/ответить/обсудить -> assistant.answer.
+          text_prompt — точный смысл вопроса, без выполнения команды.
+        - Просьба написать/составить/подготовить письмо, статью, доклад, заявление,
+          сообщение, план или другой самостоятельный текст -> assistant.generate_text.
+          text_prompt — полное ТЗ к тексту со всеми указанными деталями и тоном.
+        - Не генерируй сам длинный текст в JSON: передай задачу через text_prompt.
+        - Время -> system.get_time; дата -> system.get_date; дата и время -> system.get_datetime.
+        - Таймер -> timer.start; duration_seconds — точная длительность.
+        - Отмена таймера -> timer.cancel; timer_id=null означает последний таймер.
+        - Блокнот/Калькулятор/Проводник/браузер/настройки -> app.open с app_id:
+          notepad/calculator/explorer/browser/settings.
+        - Сайт или ссылка -> url.open; только http/https URL.
+        - Рабочий стол -> window.show_desktop.
+        - Громкость -> audio.set_volume или audio.adjust_volume; mute/unmute -> audio.mute/audio.unmute.
+        - Заблокировать ПК -> system.lock.
+        - Который час сейчас: локальное время ПК {now:yyyy-MM-dd HH:mm:ss zzz}, зона {TimeZoneInfo.Local.Id}.
 
-        Доступные сценарии:
-        - перечислить команды/возможности/действия -> assistant.list_capabilities.
-        - одно приветствие без команд -> assistant.greeting.
-        - время -> system.get_time; дата -> system.get_date; оба -> system.get_datetime.
-        - таймер на N секунд/минут/часов -> timer.start; duration_seconds = точная длительность, label короткий.
-        - отменить таймер -> timer.cancel; если номер не указан, timer_id=null (отменить последний).
-        - открыть/запустить Блокнот -> app.open, app_id=notepad.
-        - открыть/запустить Калькулятор -> app.open, app_id=calculator.
-        - открыть Проводник -> app.open, app_id=explorer.
-        - открыть браузер -> app.open, app_id=browser.
-        - открыть настройки Windows -> app.open, app_id=settings.
-        - открыть сайт/ссылку -> url.open; разрешены только http/https адреса.
-        - показать рабочий стол/свернуть окна -> window.show_desktop.
-        - установить громкость -> audio.set_volume, volume_percent.
-        - громче/тише на N процентов -> audio.adjust_volume, volume_delta.
-        - просто «громче»/«тише» -> volume_delta=10/-10.
-        - выключить/включить звук -> audio.mute / audio.unmute.
-        - заблокировать ПК -> system.lock.
-        - расчёт, заметки и чтение заметок, если они не описаны выше, направь в unknown для локального сценария.
-        - неизвестное действие -> unknown. Не выдумывай WinAPI-вызов.
-
-        Грамматика команды важнее дословных форм слов. «Включи ещё один таймер на десять секунд» — самостоятельный второй таймер.
-        Верни только JSON, без Markdown и пояснений.
+        Возвращай действия в исходном порядке. Если запрос содержит действие Windows и генерацию текста,
+        создай отдельные элементы actions для обоих. Не подменяй генерацию текста обычным чатом.
         """;
 
     private static string Limit(string value, int maxLength) =>

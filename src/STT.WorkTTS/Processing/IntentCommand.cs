@@ -22,4 +22,5 @@ public sealed class IntentArguments
     public string? Url { get; init; }
     public int? VolumePercent { get; init; }
     public int? VolumeDelta { get; init; }
+    public string? TextPrompt { get; init; }
 }
