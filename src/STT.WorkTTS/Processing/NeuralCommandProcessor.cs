@@ -1,4 +1,5 @@
 using System.Text.Json;
+using STT.WorkTTS;
 
 namespace STT.WorkTTS.Processing;
 
@@ -32,7 +33,8 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
         IntentCommand intent;
         try
         {
-            intent = await _interpreter.InterpretAsync(text, cancellationToken);
+            using (PerformanceLog.Measure("llm.qwen.intent_request"))
+                intent = await _interpreter.InterpretAsync(text, cancellationToken);
         }
         catch (Exception ex) when (
             ex is HttpRequestException or
@@ -46,8 +48,12 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
         }
 
         if (intent.Action == "unknown")
-            return _localFallback.Process(text);
+        {
+            using (PerformanceLog.Measure("intent.local_fallback"))
+                return _localFallback.Process(text);
+        }
 
-        return await _executor.ExecuteAsync(intent, cancellationToken);
+        using (PerformanceLog.Measure("action.execute", $"action={intent.Action}"))
+            return await _executor.ExecuteAsync(intent, cancellationToken);
     }
 }
