@@ -37,14 +37,15 @@ def main() -> int:
                 break
 
             text = str(request.get("text", "")).strip()
-            output_path = Path(str(request.get("output_path", "")))
+            output_value = request.get("output_path")
             voice = str(request.get("voice", "female_silky")).lower()
             if not text:
                 raise ValueError("Text cannot be empty.")
             if voice not in {"male_deep", "female_silky", "male_authoritative"}:
                 raise ValueError(f"Unsupported xVibe voice: {voice}")
-            if not str(output_path):
+            if not output_value:
                 raise ValueError("Output path is required.")
+            output_path = Path(str(output_value))
 
             with contextlib.redirect_stdout(sys.stderr):
                 audio = tts.generate(text, voice=voice)
