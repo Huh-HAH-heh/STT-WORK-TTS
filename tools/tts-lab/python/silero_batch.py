@@ -19,13 +19,20 @@ def main() -> int:
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     torch.set_num_threads(max(1, min(6, os.cpu_count() or 2)))
-    model, _ = torch.hub.load(
-        repo_or_dir="snakers4/silero-models",
-        model="silero_tts",
-        language="ru",
-        speaker="v5_6_ru",
-        trust_repo=True,
-    )
+    hub_args = {
+        "repo_or_dir": "snakers4/silero-models",
+        "model": "silero_tts",
+        "language": "ru",
+        "speaker": "v5_6_ru",
+        "trust_repo": True,
+    }
+    try:
+        model, _ = torch.hub.load(**hub_args)
+    except AssertionError as exc:
+        if "v5_6_ru" not in str(exc):
+            raise
+        print("Refreshing stale Silero Hub cache (missing v5_6_ru)...")
+        model, _ = torch.hub.load(**hub_args, force_reload=True)
     model.to(torch.device("cpu"))
     for voice in args.voices:
         audio = model.apply_tts(text=args.text, speaker=voice, sample_rate=48000)
