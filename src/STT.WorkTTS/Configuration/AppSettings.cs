@@ -6,6 +6,7 @@ public sealed class AppSettings
     public SttSettings Stt { get; set; } = new();
     public WorkSettings Work { get; set; } = new();
     public TtsSettings Tts { get; set; } = new();
+    public IntentSettings Intent { get; set; } = new();
 
     public void Validate()
     {
@@ -16,6 +17,15 @@ public sealed class AppSettings
         if (!Tts.Engine.Equals("Piper", StringComparison.OrdinalIgnoreCase)
             && !Tts.Engine.Equals("Sapi", StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Tts.Engine должен быть Piper или Sapi.");
+
+        if (Intent.TimeoutSeconds is < 5 or > 120)
+            throw new InvalidDataException("Intent.TimeoutSeconds должен быть от 5 до 120.");
+        if (!Uri.TryCreate(Intent.Endpoint, UriKind.Absolute, out var endpoint)
+            || endpoint.Scheme != Uri.UriSchemeHttp
+            || !endpoint.IsLoopback)
+            throw new InvalidDataException("Intent.Endpoint должен указывать на локальный HTTP-сервер (127.0.0.1 или localhost).");
+        if (string.IsNullOrWhiteSpace(Intent.ModelAlias))
+            throw new InvalidDataException("Intent.ModelAlias не может быть пустым.");
     }
 }
 
@@ -47,6 +57,14 @@ public sealed class TtsSettings
     public bool PlayAudio { get; set; } = true;
     public bool SaveSpeech { get; set; }
     public string SpeechDirectory { get; set; } = "data/speech";
+}
+
+public sealed class IntentSettings
+{
+    public bool Enabled { get; set; } = true;
+    public string Endpoint { get; set; } = "http://127.0.0.1:8081/v1/chat/completions";
+    public string ModelAlias { get; set; } = "stt-intent";
+    public int TimeoutSeconds { get; set; } = 30;
 }
 
 public static class AppPaths
