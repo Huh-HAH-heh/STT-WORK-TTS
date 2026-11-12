@@ -43,6 +43,15 @@ internal static class Program
         if (args.Contains("--intent-demo", StringComparer.OrdinalIgnoreCase))
             return await RunIntentDemo(settings);
 
+        var sttDemo = args.Contains("--stt-demo", StringComparer.OrdinalIgnoreCase);
+        if (sttDemo)
+        {
+            // Keep the real microphone -> Vosk -> intent -> Windows action path,
+            // but do not require any TTS engine or installed voice while testing STT.
+            settings.Tts.PlayAudio = false;
+            settings.Tts.SaveSpeech = false;
+        }
+
         try
         {
             using var recorder = new MicrophoneRecorder(settings.Audio, appDirectory);
@@ -61,12 +70,16 @@ internal static class Program
             Console.WriteLine("STT Work TTS — локальный голосовой помощник на C#");
             Console.WriteLine("Enter — начать запись; Enter ещё раз — остановить.");
             Console.WriteLine("q — выход; скажи «помощь» для списка команд.");
-            Console.WriteLine("Для сравнения голосов запусти Start.cmd --tts-demo.");
+            Console.WriteLine("Для сравнения голосов запусти tools\\tts-lab\\TtsLab.cmd.");
             Console.WriteLine($"Распознавание: Vosk, {settings.Stt.SampleRate} Гц.");
-            Console.WriteLine($"Синтез: {settings.Tts.Engine}.");
+            Console.WriteLine(sttDemo
+                ? "Синтез отключён: режим проверки микрофона и STT."
+                : $"Синтез: {settings.Tts.Engine}.");
             Console.WriteLine(settings.Intent.Enabled
                 ? $"Понимание команд: локальная нейросеть ({settings.Intent.ModelAlias}) — {settings.Intent.Endpoint}."
                 : "Понимание команд: локальные правила.");
+            if (sttDemo)
+                Console.WriteLine("Режим --stt-demo: ответ выводится в консоль, без озвучивания.");
             Console.WriteLine("STT и LLM работают локально; облачные API не используются.");
             Console.WriteLine();
 
