@@ -12,18 +12,155 @@ public sealed class WindowsActionExecutor
     private const uint KeyUp = 0x0002;
 
     private readonly TimerService _timers;
+    private readonly WindowsProcessManager _processes;
+    private readonly ConsoleCommandExecutor _console;
+    private readonly PendingConfirmationManager _confirmations = new();
 
     public WindowsActionExecutor(TimerService timers)
     {
         _timers = timers;
+        _processes = new WindowsProcessManager();
+        _console = new ConsoleCommandExecutor(_processes);
     }
 
-    public Task<CommandResult> ExecuteAsync(
+    public async Task<CommandResult> ExecuteAsync(
         IntentCommand command,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
+        if (ActionCatalog.RequiresConfirmation(command.Action))
+            return PrepareConfirmation(command);
+
+        return await ExecuteImmediateAsync(command, cancellationToken);
+    }
+
+    public async Task<CommandResult?> HandleConfirmationAsync(
+        string recognizedText,
+        CancellationToken cancellationToken = default)
+    {
+        var decision = _confirmations.Resolve(recognizedText, out var pending);
+        switch (decision)
+        {
+            case ConfirmationDecision.None:
+                return null;
+            case ConfirmationDecision.Cancelled:
+                return new CommandResult("Действие отменено.");
+            case ConfirmationDecision.Expired:
+                return new CommandResult("Время подтверждения истекло. Команда не выполнялась.");
+            case ConfirmationDecision.Confirmed:
+                if (pending is null)
+                    return new CommandResult("Подтверждение потеряло связанное действие. Ничего не выполнено.");
+                return await ExecuteConfirmedAsync(pending, cancellationToken);
+            default:
+                return null;
+        }
+    }
+
+    private CommandResult PrepareConfirmation(IntentCommand command)
+    {
+        ProcessIdentity? target = null;
+        string preview;
+
+        switch (command.Action)
+        {
+            case "system.lock":
+                preview = "WinAPI: user32!LockWorkStation() — заблокировать текущую рабочую станцию.";
+                break;
+
+            case "process.close":
+            {
+                var name = command.Arguments.ProcessName;
+                if (string.IsNullOrWhiteSpace(name))
+                    return new CommandResult("Не указано имя процесса.");
+
+                if (!_processes.TryCaptureUniqueByName(name, out target, out var error))
+                    return new CommandResult(error);
+
+                preview = $"WinAPI: CloseMainWindow() для {target!.ProcessName} (PID {target.ProcessId}).";
+                if (target.ExecutablePath is not null)
+                    preview += $"{Environment.NewLine}Файл: {target.ExecutablePath}";
+                preview += $"{Environment.NewLine}Будет отправлен обычный запрос закрытия окна. Принудительного завершения не будет.";
+                break;
+            }
+
+            case "console.run":
+            {
+                var commandLine = command.Arguments.CommandLine;
+                if (!_console.TryValidate(commandLine ?? string.Empty, out var validation, out var error))
+                    return new CommandResult("CMD-команда отклонена.", error);
+
+                target = validation!.TargetProcess;
+                preview = $"CMD (буквальная строка, без переписывания):{Environment.NewLine}{commandLine}";
+                if (target is not null)
+                {
+                    preview += $"{Environment.NewLine}Цель: {target.ProcessName} (PID {target.ProcessId}).";
+                    if (target.ExecutablePath is not null)
+                        preview += $"{Environment.NewLine}Файл: {target.ExecutablePath}";
+                }
+                if (validation.RiskNotice is not null)
+                    preview += $"{Environment.NewLine}{validation.RiskNotice}";
+                break;
+            }
+
+            default:
+                return new CommandResult($"Для действия {command.Action} не настроен сценарий подтверждения.");
+        }
+
+        _confirmations.TryCreate(command, preview, target, out var message);
+        return new CommandResult(message);
+    }
+
+    private async Task<CommandResult> ExecuteConfirmedAsync(
+        PendingConfirmation pending,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        switch (pending.Command.Action)
+        {
+            case "system.lock":
+                return LockWorkstation();
+
+            case "process.close":
+                if (pending.TargetProcess is null)
+                    return new CommandResult("Не найдена сохранённая цель процесса. Ничего не выполнено.");
+                return _processes.CloseGracefully(pending.TargetProcess);
+
+            case "console.run":
+            {
+                var commandLine = pending.Command.Arguments.CommandLine;
+                if (!_console.TryValidate(commandLine ?? string.Empty, out var validation, out var error))
+                    return new CommandResult("CMD-команда больше не проходит проверку.", error);
+
+                if (pending.TargetProcess is not null)
+                {
+                    if (validation!.TargetProcess is null
+                        || validation.TargetProcess.ProcessId != pending.TargetProcess.ProcessId
+                        || !_processes.TryResolveSameProcess(pending.TargetProcess, out var target, out error))
+                    {
+                        return new CommandResult(error.Length == 0
+                            ? "Цель команды изменилась после подтверждения. Действие отменено."
+                            : error);
+                    }
+
+                    target!.Dispose();
+                }
+
+                using (PerformanceLog.Measure("cmd.execute", $"command={validation!.CommandName}"))
+                    return await _console.ExecuteAsync(commandLine!, cancellationToken);
+            }
+
+            default:
+                return new CommandResult("Неизвестный тип подтверждённого действия.");
+        }
+    }
+
+    private Task<CommandResult> ExecuteImmediateAsync(
+        IntentCommand command,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         var args = command.Arguments;
 
         try
@@ -43,7 +180,7 @@ public sealed class WindowsActionExecutor
                 "audio.adjust_volume" => AdjustVolume(args.VolumeDelta),
                 "audio.mute" => SetMute(true),
                 "audio.unmute" => SetMute(false),
-                "system.lock" => LockWorkstation(),
+                "process.list" => _processes.ListProcesses(),
                 "assistant.list_capabilities" => LocalCommandProcessor.GetCapabilities(),
                 "assistant.greeting" => new CommandResult("Привет. Я готова принимать команды."),
                 "clarify" => new CommandResult(
@@ -185,7 +322,7 @@ public sealed class WindowsActionExecutor
 
     private static CommandResult LockWorkstation() =>
         LockWorkStationNative()
-            ? new CommandResult("Блокирую компьютер.")
+            ? new CommandResult("Рабочая станция заблокирована.")
             : new CommandResult("Windows не разрешила заблокировать рабочую станцию.");
 
     private static string FormatDate(DateTime value)
