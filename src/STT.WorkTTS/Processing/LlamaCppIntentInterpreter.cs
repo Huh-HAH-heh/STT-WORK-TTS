@@ -27,6 +27,7 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
                   "app.open", "url.open",
                   "window.show_desktop",
                   "audio.set_volume", "audio.adjust_volume", "audio.mute", "audio.unmute",
+                  "display.gamma_night", "display.gamma_restore",
                   "system.lock",
                   "process.list", "process.close",
                   "assistant.list_capabilities", "assistant.greeting",
@@ -197,6 +198,9 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
         - Сайт или ссылка -> url.open; только http/https URL.
         - Рабочий стол -> window.show_desktop.
         - Громкость -> audio.set_volume или audio.adjust_volume; mute/unmute -> audio.mute/audio.unmute.
+        - Включить ночную гамму или повысить яркость тёмных игровых сцен -> display.gamma_night.
+        - Вернуть обычную/исходную гамму или прежнюю яркость -> display.gamma_restore.
+          Эти действия не принимают аргументов; исполнитель сохраняет исходную гамма-таблицу и восстанавливает её по запросу.
         - Заблокировать ПК -> system.lock; подтверждение запрашивает исполнитель, не модель.
         - Показать запущенные процессы -> process.list.
         - Закрыть приложение по имени -> process.close; process_name — точное имя процесса латиницей без .exe, process_index=null.
