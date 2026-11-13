@@ -70,6 +70,9 @@ internal static class Program
             using var heavyInterpreter = new LlamaCppIntentInterpreter(settings.Generation.ToIntentSettings());
             using var textGenerator = new LlamaCppTextGenerator(settings.Generation, appDirectory);
             using var executor = new WindowsActionExecutor(timers);
+            if (executor.GammaRecoveryNotice is not null)
+                Console.WriteLine($"[GAMMA] {executor.GammaRecoveryNotice}");
+
             ICommandProcessor processor = settings.Intent.Enabled
                 ? new NeuralCommandProcessor(
                     fastInterpreter,
