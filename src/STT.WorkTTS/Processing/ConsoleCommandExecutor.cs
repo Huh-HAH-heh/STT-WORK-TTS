@@ -170,6 +170,7 @@ public sealed class ConsoleCommandExecutor
         message = string.Empty;
 
         var tokens = Regex.Matches(commandLine, @"""[^""]*""|\S+")
+            .Cast<Match>()
             .Select(x => x.Value.Trim('"'))
             .ToArray();
 
