@@ -39,6 +39,8 @@ public static class ActionCatalog
             ["audio.adjust_volume"] = new("audio.adjust_volume", "Изменить громкость", ActionBackend.WinApi, ActionRisk.Reversible),
             ["audio.mute"] = new("audio.mute", "Выключить звук", ActionBackend.WinApi, ActionRisk.Reversible),
             ["audio.unmute"] = new("audio.unmute", "Включить звук", ActionBackend.WinApi, ActionRisk.Reversible),
+            ["display.gamma_night"] = new("display.gamma_night", "Осветлить тёмные игровые сцены через гамма-коррекцию", ActionBackend.WinApi, ActionRisk.Reversible),
+            ["display.gamma_restore"] = new("display.gamma_restore", "Восстановить исходную гамма-коррекцию экрана", ActionBackend.WinApi, ActionRisk.Reversible),
             ["system.lock"] = new("system.lock", "Заблокировать рабочую станцию", ActionBackend.WinApi, ActionRisk.ConfirmationRequired),
             ["process.list"] = new("process.list", "Получить список процессов", ActionBackend.WinApi, ActionRisk.ReadOnly),
             ["process.close"] = new("process.close", "Корректно закрыть одно приложение", ActionBackend.WinApi, ActionRisk.ConfirmationRequired),
