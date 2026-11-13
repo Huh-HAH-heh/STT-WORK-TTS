@@ -6,7 +6,7 @@ public sealed class DisplayGammaController : IDisposable
 {
     private const int ChannelLength = 256;
     private const int RampLength = ChannelLength * 3;
-    private const double NightGammaExponent = 0.52;
+    private const double NightGammaExponent = 0.42;
     private const int ReadbackTolerance = 1024;
 
     private readonly object _sync = new();
