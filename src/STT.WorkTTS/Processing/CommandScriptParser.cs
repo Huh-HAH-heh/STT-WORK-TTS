@@ -14,7 +14,7 @@ public static class CommandScriptParser
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex GammaNightPattern = new(
-        @"^\s*(?:(?:включи|активируй|примени|подними|увеличь|выстави|установи|поставь)\s+(?:(?:ночн\w*|повышенн\w*|максимальн\w*)\s+)?(?:гамм\w*|яркост\w*)(?:\s+(?:на\s+)?максимум\w*)?(?:\s+экрана)?|(?:ночн\w*|игров\w*|максимальн\w*)\s+гамм\w*|(?:яркост\w*|гамм\w*)\s+на\s+максимум\w*|сделай\s+(?:экран\s+)?(?:максимально\s+)?ярче(?:\s+для\s+игр?)?)\s*[.!?]*$",
+        @"^\s*(?:(?:включи|активируй|примени|подними|увеличь|выстави|установи|поставь|максимизируй)\s+(?:(?:ночн\w*|повышенн\w*|максимальн\w*)\s+)?(?:гамм\w*|яркост\w*)(?:\s+экрана)?(?:\s+(?:на\s+)?максимум\w*)?(?:\s+для\s+игр?)?|(?:ночн\w*|игров\w*|максимальн\w*)\s+гамм\w*|(?:яркост\w*|гамм\w*)\s+на\s+максимум\w*|сделай\s+(?:(?:экран|картинку|изображение)\s+)?(?:максимально\s+)?ярче(?:\s+для\s+игр?)?)\s*[.!?]*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ProcessListPattern = new(
