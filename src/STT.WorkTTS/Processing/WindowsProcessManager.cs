@@ -11,28 +11,44 @@ public sealed record ProcessIdentity(
 
 public sealed class WindowsProcessManager
 {
+    private const int MaxIndexedProcesses = 30;
+    private static readonly TimeSpan SnapshotLifetime = TimeSpan.FromMinutes(2);
+
     private static readonly HashSet<string> ProtectedProcesses = new(StringComparer.OrdinalIgnoreCase)
     {
         "csrss", "wininit", "winlogon", "lsass", "services", "smss",
         "system", "registry", "idle", "svchost"
     };
 
+    private readonly object _snapshotSync = new();
+    private Dictionary<int, ProcessIdentity> _indexedProcesses = [];
+    private DateTimeOffset _snapshotExpiresAt;
+
     public CommandResult ListProcesses()
     {
-        var rows = new List<(int Pid, string Name, long MemoryMb, string Window)>();
+        var rows = new List<(ProcessIdentity Identity, long MemoryMb, string Window)>();
         foreach (var process in Process.GetProcesses())
         {
             try
             {
-                rows.Add((
+                var identity = new ProcessIdentity(
                     process.Id,
                     process.ProcessName,
+                    process.StartTime.ToUniversalTime().Ticks,
+                    TryGetExecutablePath(process));
+
+                rows.Add((
+                    identity,
                     process.WorkingSet64 / (1024 * 1024),
-                    SafeWindowTitle(process)));
+                    LimitWindowTitle(SafeWindowTitle(process))));
             }
-            catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+            catch (Exception ex) when (
+                ex is ArgumentException
+                    or InvalidOperationException
+                    or System.ComponentModel.Win32Exception
+                    or UnauthorizedAccessException)
             {
-                // Process may exit or deny inspection between enumeration and reading.
+                // Processes can exit or deny inspection during enumeration.
             }
             finally
             {
@@ -40,18 +56,79 @@ public sealed class WindowsProcessManager
             }
         }
 
-        if (rows.Count == 0)
-            return new CommandResult("Не удалось получить список процессов.");
+        var selected = rows
+            .OrderByDescending(x => !string.IsNullOrWhiteSpace(x.Window))
+            .ThenByDescending(x => x.MemoryMb)
+            .ThenBy(x => x.Identity.ProcessName, StringComparer.OrdinalIgnoreCase)
+            .Take(MaxIndexedProcesses)
+            .ToArray();
 
-        var lines = rows
-            .OrderByDescending(x => x.MemoryMb)
-            .Take(25)
-            .Select(x => $"{x.Pid,7}  {x.MemoryMb,5} MB  {x.Name}" +
-                (string.IsNullOrWhiteSpace(x.Window) ? string.Empty : $" — {x.Window}"));
+        var snapshot = new Dictionary<int, ProcessIdentity>();
+        for (var i = 0; i < selected.Length; i++)
+            snapshot[i + 1] = selected[i].Identity;
+
+        lock (_snapshotSync)
+        {
+            _indexedProcesses = snapshot;
+            _snapshotExpiresAt = DateTimeOffset.UtcNow.Add(SnapshotLifetime);
+        }
+
+        if (selected.Length == 0)
+            return new CommandResult("Не удалось получить доступные для индексации процессы.");
+
+        var lines = selected.Select((row, index) =>
+        {
+            var protectedMark = IsProtected(row.Identity.ProcessName) ? " [защищён]" : string.Empty;
+            var window = string.IsNullOrWhiteSpace(row.Window) ? string.Empty : $" — {row.Window}";
+            return $"{index + 1}. {row.Identity.ProcessName} (PID {row.Identity.ProcessId}, {row.MemoryMb} MB){protectedMark}{window}";
+        });
+
+        var suffix = rows.Count > selected.Length
+            ? $" Показаны первые {selected.Length} из {rows.Count}."
+            : string.Empty;
 
         return new CommandResult(
-            $"Процессы: найдено {rows.Count}, показано до 25 по использованию памяти.\n" +
+            $"Активные процессы. Скажи «закрой процесс номер три» или «заверши процесс номер 3». " +
+            $"Индексы действуют 2 минуты и относятся только к этому списку.{suffix}{Environment.NewLine}" +
             string.Join(Environment.NewLine, lines));
+    }
+
+    public bool TryGetIndexedProcess(
+        int index,
+        out ProcessIdentity? identity,
+        out string message)
+    {
+        identity = null;
+        ProcessIdentity? selected;
+
+        lock (_snapshotSync)
+        {
+            if (_indexedProcesses.Count == 0 || DateTimeOffset.UtcNow >= _snapshotExpiresAt)
+            {
+                _indexedProcesses.Clear();
+                message = "Список процессов устарел. Скажи «покажи активные процессы» и повтори команду.";
+                return false;
+            }
+
+            if (!_indexedProcesses.TryGetValue(index, out selected))
+            {
+                message = $"В последнем списке нет процесса с номером {index}. Обнови список процессов.";
+                return false;
+            }
+        }
+
+        if (selected is null)
+        {
+            message = "Не удалось получить выбранный процесс. Обнови список.";
+            return false;
+        }
+
+        if (!TryResolveSameProcess(selected, out var process, out message))
+            return false;
+
+        process!.Dispose();
+        identity = selected;
+        return true;
     }
 
     public bool TryCaptureUniqueByName(
@@ -86,7 +163,7 @@ public sealed class WindowsProcessManager
             if (processes.Length > 1)
             {
                 var ids = string.Join(", ", processes.Select(x => x.Id));
-                message = $"Найдено несколько процессов «{normalized}» (PID: {ids}). Уточни конкретный PID; действие не выполнено.";
+                message = $"Найдено несколько процессов «{normalized}» (PID: {ids}). Уточни конкретный PID или используй индекс из списка; действие не выполнено.";
                 return false;
             }
 
@@ -125,7 +202,10 @@ public sealed class WindowsProcessManager
             message = $"Процесс с PID {processId} уже завершился или не существует.";
             return false;
         }
-        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or UnauthorizedAccessException)
+        catch (Exception ex) when (
+            ex is InvalidOperationException
+                or System.ComponentModel.Win32Exception
+                or UnauthorizedAccessException)
         {
             message = $"Не удалось безопасно проверить процесс {processId}: {ex.Message}";
             return false;
@@ -138,28 +218,54 @@ public sealed class WindowsProcessManager
         out string message)
     {
         process = null;
-        if (!TryCapture(expected.ProcessId, out var current, out message))
-            return false;
-
-        if (current is null
-            || current.StartTimeUtcTicks != expected.StartTimeUtcTicks
-            || !string.Equals(current.ProcessName, expected.ProcessName, StringComparison.OrdinalIgnoreCase)
-            || (expected.ExecutablePath is not null
-                && !string.Equals(current.ExecutablePath, expected.ExecutablePath, StringComparison.OrdinalIgnoreCase)))
-        {
-            message = "Процесс с этим PID изменился после запроса. Повторно найди его; действие отменено.";
-            return false;
-        }
+        Process? candidate = null;
 
         try
         {
-            process = Process.GetProcessById(expected.ProcessId);
+            // Open once, then verify and operate through the same process handle.
+            candidate = Process.GetProcessById(expected.ProcessId);
+            var currentName = candidate.ProcessName;
+
+            if (IsProtected(currentName))
+            {
+                message = "Этот системный процесс защищён от завершения.";
+                candidate.Dispose();
+                return false;
+            }
+
+            var currentStartTime = candidate.StartTime.ToUniversalTime().Ticks;
+            var currentPath = TryGetExecutablePath(candidate);
+            if (currentStartTime != expected.StartTimeUtcTicks
+                || !string.Equals(currentName, expected.ProcessName, StringComparison.OrdinalIgnoreCase)
+                || (expected.ExecutablePath is not null
+                    && !string.Equals(currentPath, expected.ExecutablePath, StringComparison.OrdinalIgnoreCase)))
+            {
+                message = "Процесс с этим PID изменился после запроса. Повторно найди его; действие отменено.";
+                candidate.Dispose();
+                return false;
+            }
+
+            process = candidate;
+            candidate = null;
+            message = string.Empty;
             return true;
         }
         catch (ArgumentException)
         {
-            message = "Процесс завершился до выполнения команды.";
+            message = $"Процесс с PID {expected.ProcessId} завершился до выполнения команды.";
             return false;
+        }
+        catch (Exception ex) when (
+            ex is InvalidOperationException
+                or System.ComponentModel.Win32Exception
+                or UnauthorizedAccessException)
+        {
+            message = $"Не удалось повторно проверить процесс {expected.ProcessId}: {ex.Message}";
+            return false;
+        }
+        finally
+        {
+            candidate?.Dispose();
         }
     }
 
@@ -196,4 +302,7 @@ public sealed class WindowsProcessManager
         try { return process.MainModule?.FileName; }
         catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or UnauthorizedAccessException) { return null; }
     }
+
+    private static string LimitWindowTitle(string value) =>
+        value.Length <= 64 ? value : value[..61] + "...";
 }
