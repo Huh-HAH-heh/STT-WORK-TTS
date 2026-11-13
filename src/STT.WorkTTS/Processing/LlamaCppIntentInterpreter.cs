@@ -28,6 +28,7 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
                   "window.show_desktop",
                   "audio.set_volume", "audio.adjust_volume", "audio.mute", "audio.unmute",
                   "system.lock",
+                  "process.list", "process.close",
                   "assistant.list_capabilities", "assistant.greeting",
                   "assistant.answer", "assistant.generate_text",
                   "unknown", "clarify"
@@ -47,11 +48,12 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
                   "url": { "type": ["string", "null"] },
                   "volume_percent": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
                   "volume_delta": { "type": ["integer", "null"], "minimum": -100, "maximum": 100 },
-                  "text_prompt": { "type": ["string", "null"] }
+                  "text_prompt": { "type": ["string", "null"] },
+                  "process_name": { "type": ["string", "null"], "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9_.-]+$" }
                 },
                 "required": [
                   "duration_seconds", "label", "timer_id", "app_id",
-                  "url", "volume_percent", "volume_delta", "text_prompt"
+                  "url", "volume_percent", "volume_delta", "text_prompt", "process_name"
                 ]
               },
               "clarification": { "type": ["string", "null"] }
@@ -174,7 +176,8 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
         - Заполняй только известные аргументы; неизвестные значения — null. Все не относящиеся к действию поля должны быть null.
         - Не подставляй "unknown" или "null" строкой: unknown — только action, в arguments все поля null.
         - Не выдумывай время, приложения, ссылки и параметры. Неподдерживаемую системную команду отмечай unknown.
-        - PowerShell, CMD, выполнение скриптов и произвольных ярлыков не поддерживаются: unknown/clarify, никогда не подменяй их другой командой.
+        - Если пользователь явно говорит «выполни в CMD» или «выполни в командной строке», буквальную строку обработает отдельный парсер; не переписывай её в JSON и не подменяй другим действием.
+        - Не запускай PowerShell, скрипты, .bat/.ps1 и произвольные ярлыки через intent-план.
         - Короткое уточнение — только когда без него нельзя выбрать действие.
         - Для обычного приветствия используй assistant.greeting; для списка возможностей — assistant.list_capabilities.
 
@@ -193,7 +196,10 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
         - Сайт или ссылка -> url.open; только http/https URL.
         - Рабочий стол -> window.show_desktop.
         - Громкость -> audio.set_volume или audio.adjust_volume; mute/unmute -> audio.mute/audio.unmute.
-        - Заблокировать ПК -> system.lock.
+        - Заблокировать ПК -> system.lock; подтверждение запрашивает исполнитель, не модель.
+        - Показать запущенные процессы -> process.list.
+        - Корректно закрыть одно приложение -> process.close; process_name — точное имя процесса латиницей без .exe.
+          Никогда не заменяй обычное закрытие на принудительный taskkill. При неоднозначной цели используй clarify.
         - Который час сейчас: локальное время ПК {now:yyyy-MM-dd HH:mm:ss zzz}, зона {TimeZoneInfo.Local.Id}.
 
         Возвращай действия в исходном порядке. Если запрос содержит действие Windows и генерацию текста,
