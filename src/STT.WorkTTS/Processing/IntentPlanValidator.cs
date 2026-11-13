@@ -210,6 +210,25 @@ public static class IntentPlanValidator
                 $"Действие {command.Action} не подтверждается словами исходного запроса.");
     }
 
+    private static readonly IReadOnlyDictionary<string, int> SpokenIndexes =
+        new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["один"] = 1, ["одна"] = 1, ["одну"] = 1, ["первый"] = 1, ["первого"] = 1, ["первая"] = 1,
+            ["два"] = 2, ["две"] = 2, ["второй"] = 2, ["второго"] = 2, ["вторая"] = 2,
+            ["три"] = 3, ["третий"] = 3, ["третьего"] = 3, ["третья"] = 3,
+            ["четыре"] = 4, ["четвертый"] = 4, ["четвертого"] = 4, ["четвертая"] = 4,
+            ["пять"] = 5, ["пятый"] = 5, ["пятого"] = 5, ["пятая"] = 5,
+            ["шесть"] = 6, ["шестой"] = 6, ["шестого"] = 6, ["шестая"] = 6,
+            ["семь"] = 7, ["седьмой"] = 7, ["седьмого"] = 7, ["седьмая"] = 7,
+            ["восемь"] = 8, ["восьмой"] = 8, ["восьмого"] = 8, ["восьмая"] = 8,
+            ["девять"] = 9, ["девятый"] = 9, ["девятого"] = 9, ["девятая"] = 9,
+            ["десять"] = 10, ["десятый"] = 10, ["десятого"] = 10, ["десятая"] = 10,
+            ["одиннадцать"] = 11, ["двенадцать"] = 12, ["тринадцать"] = 13,
+            ["четырнадцать"] = 14, ["пятнадцать"] = 15, ["шестнадцать"] = 16,
+            ["семнадцать"] = 17, ["восемнадцать"] = 18, ["девятнадцать"] = 19,
+            ["двадцать"] = 20
+        };
+
     private static bool ProcessIndexIsMentioned(string text, int index)
     {
         if (!text.Contains("процесс", StringComparison.Ordinal)
@@ -217,32 +236,28 @@ public static class IntentPlanValidator
             && !text.Contains("программ", StringComparison.Ordinal))
             return false;
 
-        if (System.Text.RegularExpressions.Regex.IsMatch(
+        var match = System.Text.RegularExpressions.Regex.Match(
             text,
-            $@"\\b(?:номер|индекс)(?:ом)?\\s+{index}\\b",
-            System.Text.RegularExpressions.RegexOptions.CultureInvariant))
-            return true;
+            @"\\b(?:номер|индекс)(?:ом)?\\s+(?<value>\\d{1,2}|[а-яё]+(?:\\s+[а-яё]+)?)\\b",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
-        if (!text.Contains("номер", StringComparison.Ordinal)
-            && !text.Contains("индекс", StringComparison.Ordinal))
+        if (!match.Success)
             return false;
 
-        var spokenNumbers = index switch
-        {
-            1 => new[] { "один", "одна", "одну", "первый", "первого", "первая" },
-            2 => new[] { "два", "две", "второй", "второго", "вторая" },
-            3 => new[] { "три", "третий", "третьего", "третья" },
-            4 => new[] { "четыре", "четвертый", "четвертого", "четвертая" },
-            5 => new[] { "пять", "пятый", "пятого", "пятая" },
-            6 => new[] { "шесть", "шестой", "шестого", "шестая" },
-            7 => new[] { "семь", "седьмой", "седьмого", "седьмая" },
-            8 => new[] { "восемь", "восьмой", "восьмого", "восьмая" },
-            9 => new[] { "девять", "девятый", "девятого", "девятая" },
-            10 => new[] { "десять", "десятый", "десятого", "десятая" },
-            _ => Array.Empty<string>()
-        };
+        var spokenValue = match.Groups["value"].Value;
+        if (int.TryParse(spokenValue, out var numericIndex))
+            return numericIndex == index;
 
-        return spokenNumbers.Any(text.Contains);
+        if (SpokenIndexes.TryGetValue(spokenValue, out var wordIndex))
+            return wordIndex == index;
+
+        var compound = spokenValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (compound.Length == 2
+            && SpokenIndexes.TryGetValue(compound[0], out var tens)
+            && int.TryParse(compound[1], out _))
+            return false;
+
+        return false;
     }
 
     private static bool ProcessIsMentioned(string text, string? processName)
