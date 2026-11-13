@@ -9,6 +9,7 @@ public static class IntentPlanValidator
         "app.open", "url.open", "window.show_desktop",
         "audio.set_volume", "audio.adjust_volume", "audio.mute", "audio.unmute",
         "system.lock",
+        "process.list", "process.close",
         "assistant.list_capabilities", "assistant.greeting",
         "assistant.answer", "assistant.generate_text",
         "unknown", "clarify"
@@ -63,12 +64,14 @@ public static class IntentPlanValidator
             "volume_percent" => args.VolumePercent is not null,
             "volume_delta" => args.VolumeDelta is not null,
             "text_prompt" => args.TextPrompt is not null,
+            "process_name" => args.ProcessName is not null,
+            "command_line" => args.CommandLine is not null,
             _ => false
         };
 
         bool HasUnexpected(params string[] allowed) =>
             new[] { "duration_seconds", "label", "timer_id", "app_id", "url",
-                    "volume_percent", "volume_delta", "text_prompt" }
+                    "volume_percent", "volume_delta", "text_prompt", "process_name", "command_line" }
                 .Any(name => Has(name) && !allowed.Contains(name, StringComparer.Ordinal));
 
         bool IsEmptyExcept(params string[] allowed) => !HasUnexpected(allowed);
@@ -84,6 +87,7 @@ public static class IntentPlanValidator
             case "system.lock":
             case "assistant.list_capabilities":
             case "assistant.greeting":
+            case "process.list":
             case "unknown":
                 Require(IsEmptyExcept(), $"{command.Action} не принимает аргументы.");
                 break;
@@ -126,6 +130,17 @@ public static class IntentPlanValidator
                     "Некорректное изменение громкости.");
                 break;
 
+            case "process.close":
+                Require(IsEmptyExcept("process_name"), "У process.close лишние аргументы.");
+                Require(args.ProcessName is not null
+                    && args.ProcessName.Length is >= 1 and <= 64
+                    && System.Text.RegularExpressions.Regex.IsMatch(
+                        args.ProcessName,
+                        @"^[A-Za-z0-9_.-]+$",
+                        System.Text.RegularExpressions.RegexOptions.CultureInvariant),
+                    "У process.close некорректное имя процесса.");
+                break;
+
             case "assistant.answer":
             case "assistant.generate_text":
                 Require(IsEmptyExcept("text_prompt"), $"{command.Action} содержит лишние аргументы.");
@@ -165,6 +180,9 @@ public static class IntentPlanValidator
             "audio.set_volume" or "audio.adjust_volume" or "audio.mute" or "audio.unmute" =>
                 HasAny("громк", "тише", "громче", "звук", "беззвуч", "звук"),
             "system.lock" => HasAny("заблок", "блокиров"),
+            "process.list" => HasAny("процесс", "tasklist"),
+            "process.close" => HasAny("закрой", "закрыть", "заверши", "завершить", "останови", "остановить", "убей")
+                && ProcessIsMentioned(text, command.Arguments.ProcessName),
             "assistant.list_capabilities" => HasAny("команд", "функци", "возможност", "что ты умеешь", "что ты можешь"),
             "assistant.greeting" => HasAny("привет", "здравствуй", "добрый"),
             "assistant.answer" => HasAny("объясни", "расскажи", "почему", "зачем", "что такое", "кто такой", "как работает", "ответь"),
@@ -176,6 +194,33 @@ public static class IntentPlanValidator
         if (!grounded)
             throw new InvalidDataException(
                 $"Действие {command.Action} не подтверждается словами исходного запроса.");
+    }
+
+    private static bool ProcessIsMentioned(string text, string? processName)
+    {
+        if (string.IsNullOrWhiteSpace(processName))
+            return false;
+
+        var name = processName.ToLowerInvariant().Replace(".exe", string.Empty, StringComparison.Ordinal);
+        if (text.Contains(name, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        var aliases = name switch
+        {
+            "discord" => new[] { "дискорд" },
+            "steam" => new[] { "стим" },
+            "chrome" => new[] { "хром", "гугл хром" },
+            "msedge" => new[] { "эдж", "майкрософт эдж" },
+            "firefox" => new[] { "фаерфокс", "файрфокс" },
+            "explorer" => new[] { "проводник" },
+            "notepad" => new[] { "блокнот" },
+            "code" => new[] { "вс код", "визуал студио код" },
+            "telegram" => new[] { "телеграм" },
+            "obs64" => new[] { "обс" },
+            _ => Array.Empty<string>()
+        };
+
+        return aliases.Any(text.Contains);
     }
 
     private static bool AppIsMentioned(string text, string appId) => appId switch
