@@ -229,7 +229,6 @@ public sealed class WindowsProcessManager
             if (IsProtected(currentName))
             {
                 message = "Этот системный процесс защищён от завершения.";
-                candidate.Dispose();
                 return false;
             }
 
@@ -241,7 +240,6 @@ public sealed class WindowsProcessManager
                     && !string.Equals(currentPath, expected.ExecutablePath, StringComparison.OrdinalIgnoreCase)))
             {
                 message = "Процесс с этим PID изменился после запроса. Повторно найди его; действие отменено.";
-                candidate.Dispose();
                 return false;
             }
 
