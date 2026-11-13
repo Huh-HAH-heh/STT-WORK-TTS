@@ -24,8 +24,8 @@ public sealed record ActionDefinition(
 
 public static class ActionCatalog
 {
-    private static readonly IReadOnlyDictionary<string, ActionDefinition> Definitions =
-        new Dictionary<string, ActionDefinition>(StringComparer.Ordinal)
+    private static readonly Dictionary<string, ActionDefinition> Definitions =
+        new(StringComparer.Ordinal)
         {
             ["system.get_time"] = new("system.get_time", "Получить локальное время", ActionBackend.Local, ActionRisk.ReadOnly),
             ["system.get_date"] = new("system.get_date", "Получить локальную дату", ActionBackend.Local, ActionRisk.ReadOnly),
