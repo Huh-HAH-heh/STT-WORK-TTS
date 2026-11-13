@@ -70,14 +70,27 @@ public sealed class WindowsActionExecutor
 
             case "process.close":
             {
+                var processIndex = command.Arguments.ProcessIndex;
                 var name = command.Arguments.ProcessName;
-                if (string.IsNullOrWhiteSpace(name))
-                    return new CommandResult("Не указано имя процесса.");
+                string error;
 
-                if (!_processes.TryCaptureUniqueByName(name, out target, out var error))
-                    return new CommandResult(error);
+                if (processIndex is int index)
+                {
+                    if (!_processes.TryGetIndexedProcess(index, out target, out error))
+                        return new CommandResult(error);
 
-                preview = $"WinAPI: CloseMainWindow() для {target!.ProcessName} (PID {target.ProcessId}).";
+                    preview = $"Выбран процесс №{index}: {target!.ProcessName} (PID {target.ProcessId}).";
+                }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(name))
+                        return new CommandResult("Не указано имя или индекс процесса.");
+
+                    if (!_processes.TryCaptureUniqueByName(name, out target, out error))
+                        return new CommandResult(error);
+
+                    preview = $"WinAPI: CloseMainWindow() для {target!.ProcessName} (PID {target.ProcessId}).";
+                }
                 if (target.ExecutablePath is not null)
                     preview += $"{Environment.NewLine}Файл: {target.ExecutablePath}";
                 preview += $"{Environment.NewLine}Будет отправлен обычный запрос закрытия окна. Принудительного завершения не будет.";
