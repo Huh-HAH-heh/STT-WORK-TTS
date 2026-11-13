@@ -5,7 +5,7 @@ using NAudio.CoreAudioApi;
 
 namespace STT.WorkTTS.Processing;
 
-public sealed class WindowsActionExecutor
+public sealed class WindowsActionExecutor : IDisposable
 {
     private const byte VkLeftWindows = 0x5B;
     private const byte VkD = 0x44;
@@ -15,6 +15,9 @@ public sealed class WindowsActionExecutor
     private readonly WindowsProcessManager _processes;
     private readonly ConsoleCommandExecutor _console;
     private readonly PendingConfirmationManager _confirmations = new();
+    private readonly DisplayGammaController _displayGamma = new();
+
+    public string? GammaRecoveryNotice => _displayGamma.RecoveryNotice;
 
     public WindowsActionExecutor(TimerService timers)
     {
@@ -195,6 +198,8 @@ public sealed class WindowsActionExecutor
                 "audio.adjust_volume" => AdjustVolume(args.VolumeDelta),
                 "audio.mute" => SetMute(true),
                 "audio.unmute" => SetMute(false),
+                "display.gamma_night" => _displayGamma.EnableNightMode(),
+                "display.gamma_restore" => _displayGamma.RestoreOriginal(),
                 "process.list" => _processes.ListProcesses(),
                 "assistant.list_capabilities" => LocalCommandProcessor.GetCapabilities(),
                 "assistant.greeting" => new CommandResult("Привет. Я готова принимать команды."),
@@ -218,6 +223,8 @@ public sealed class WindowsActionExecutor
                 ex.Message));
         }
     }
+
+    public void Dispose() => _displayGamma.Dispose();
 
     private CommandResult StartTimer(int? durationSeconds, string? label)
     {
