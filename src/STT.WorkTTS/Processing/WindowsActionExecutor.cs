@@ -91,7 +91,7 @@ public sealed class WindowsActionExecutor
 
                     preview = $"WinAPI: CloseMainWindow() для {target!.ProcessName} (PID {target.ProcessId}).";
                 }
-                if (target.ExecutablePath is not null)
+                if (target!.ExecutablePath is not null)
                     preview += $"{Environment.NewLine}Файл: {target.ExecutablePath}";
                 preview += $"{Environment.NewLine}Будет отправлен обычный запрос закрытия окна. Принудительного завершения не будет.";
                 break;
