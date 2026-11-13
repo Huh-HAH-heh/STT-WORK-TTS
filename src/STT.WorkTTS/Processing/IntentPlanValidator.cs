@@ -65,13 +65,14 @@ public static class IntentPlanValidator
             "volume_delta" => args.VolumeDelta is not null,
             "text_prompt" => args.TextPrompt is not null,
             "process_name" => args.ProcessName is not null,
+            "process_index" => args.ProcessIndex is not null,
             "command_line" => args.CommandLine is not null,
             _ => false
         };
 
         bool HasUnexpected(params string[] allowed) =>
             new[] { "duration_seconds", "label", "timer_id", "app_id", "url",
-                    "volume_percent", "volume_delta", "text_prompt", "process_name", "command_line" }
+                    "volume_percent", "volume_delta", "text_prompt", "process_name", "process_index", "command_line" }
                 .Any(name => Has(name) && !allowed.Contains(name, StringComparer.Ordinal));
 
         bool IsEmptyExcept(params string[] allowed) => !HasUnexpected(allowed);
@@ -131,14 +132,25 @@ public static class IntentPlanValidator
                 break;
 
             case "process.close":
-                Require(IsEmptyExcept("process_name"), "У process.close лишние аргументы.");
-                Require(args.ProcessName is not null
-                    && args.ProcessName.Length is >= 1 and <= 64
-                    && System.Text.RegularExpressions.Regex.IsMatch(
-                        args.ProcessName,
-                        @"^[A-Za-z0-9_.-]+$",
-                        System.Text.RegularExpressions.RegexOptions.CultureInvariant),
-                    "У process.close некорректное имя процесса.");
+                Require(IsEmptyExcept("process_name", "process_index"), "У process.close лишние аргументы.");
+                var hasProcessIndex = args.ProcessIndex is not null;
+                var hasProcessName = !string.IsNullOrWhiteSpace(args.ProcessName);
+                Require(hasProcessIndex ^ hasProcessName,
+                    "У process.close укажи либо индекс из списка процессов, либо имя процесса.");
+                if (hasProcessIndex)
+                {
+                    Require(args.ProcessIndex is >= 1 and <= 30,
+                        "Индекс процесса должен быть от 1 до 30.");
+                }
+                else
+                {
+                    Require(args.ProcessName!.Length is >= 1 and <= 64
+                        && System.Text.RegularExpressions.Regex.IsMatch(
+                            args.ProcessName,
+                            @"^[A-Za-z0-9_.-]+$",
+                            System.Text.RegularExpressions.RegexOptions.CultureInvariant),
+                        "У process.close некорректное имя процесса.");
+                }
                 break;
 
             case "assistant.answer":
@@ -182,7 +194,9 @@ public static class IntentPlanValidator
             "system.lock" => HasAny("заблок", "блокиров"),
             "process.list" => HasAny("процесс", "tasklist"),
             "process.close" => HasAny("закрой", "закрыть", "заверши", "завершить", "останови", "остановить", "убей")
-                && ProcessIsMentioned(text, command.Arguments.ProcessName),
+                && (command.Arguments.ProcessIndex is int index
+                    ? ProcessIndexIsMentioned(text, index)
+                    : ProcessIsMentioned(text, command.Arguments.ProcessName)),
             "assistant.list_capabilities" => HasAny("команд", "функци", "возможност", "что ты умеешь", "что ты можешь"),
             "assistant.greeting" => HasAny("привет", "здравствуй", "добрый"),
             "assistant.answer" => HasAny("объясни", "расскажи", "почему", "зачем", "что такое", "кто такой", "как работает", "ответь"),
@@ -194,6 +208,41 @@ public static class IntentPlanValidator
         if (!grounded)
             throw new InvalidDataException(
                 $"Действие {command.Action} не подтверждается словами исходного запроса.");
+    }
+
+    private static bool ProcessIndexIsMentioned(string text, int index)
+    {
+        if (!text.Contains("процесс", StringComparison.Ordinal)
+            && !text.Contains("приложен", StringComparison.Ordinal)
+            && !text.Contains("программ", StringComparison.Ordinal))
+            return false;
+
+        if (System.Text.RegularExpressions.Regex.IsMatch(
+            text,
+            $@"\\b(?:номер|индекс)(?:ом)?\\s+{index}\\b",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant))
+            return true;
+
+        if (!text.Contains("номер", StringComparison.Ordinal)
+            && !text.Contains("индекс", StringComparison.Ordinal))
+            return false;
+
+        var spokenNumbers = index switch
+        {
+            1 => new[] { "один", "одна", "одну", "первый", "первого", "первая" },
+            2 => new[] { "два", "две", "второй", "второго", "вторая" },
+            3 => new[] { "три", "третий", "третьего", "третья" },
+            4 => new[] { "четыре", "четвертый", "четвертого", "четвертая" },
+            5 => new[] { "пять", "пятый", "пятого", "пятая" },
+            6 => new[] { "шесть", "шестой", "шестого", "шестая" },
+            7 => new[] { "семь", "седьмой", "седьмого", "седьмая" },
+            8 => new[] { "восемь", "восьмой", "восьмого", "восьмая" },
+            9 => new[] { "девять", "девятый", "девятого", "девятая" },
+            10 => new[] { "десять", "десятый", "десятого", "десятая" },
+            _ => Array.Empty<string>()
+        };
+
+        return spokenNumbers.Any(text.Contains);
     }
 
     private static bool ProcessIsMentioned(string text, string? processName)
