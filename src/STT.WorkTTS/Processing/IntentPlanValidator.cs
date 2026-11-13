@@ -132,6 +132,7 @@ public static class IntentPlanValidator
                 break;
 
             case "process.close":
+            {
                 Require(IsEmptyExcept("process_name", "process_index"), "У process.close лишние аргументы.");
                 var hasProcessIndex = args.ProcessIndex is not null;
                 var hasProcessName = !string.IsNullOrWhiteSpace(args.ProcessName);
@@ -152,6 +153,7 @@ public static class IntentPlanValidator
                         "У process.close некорректное имя процесса.");
                 }
                 break;
+            }
 
             case "assistant.answer":
             case "assistant.generate_text":
