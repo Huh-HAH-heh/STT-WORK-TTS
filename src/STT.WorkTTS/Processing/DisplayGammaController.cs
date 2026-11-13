@@ -297,29 +297,51 @@ public sealed class DisplayGammaController : IDisposable
 
     private static bool TrySetAndVerify(IntPtr deviceContext, ushort[] ramp, out string error)
     {
+        var actual = new ushort[RampLength];
+        if (!GetDeviceGammaRamp(deviceContext, actual))
+        {
+            error = "Windows не смогла прочитать текущую гамма-таблицу.";
+            return false;
+        }
+
+        // A driver may not support setting ramps. If the requested state is already active,
+        // treat it as restored instead of failing just because SetDeviceGammaRamp is unavailable.
+        if (RampMatches(actual, ramp))
+        {
+            error = string.Empty;
+            return true;
+        }
+
         if (!SetDeviceGammaRamp(deviceContext, ramp))
         {
             error = "Windows или видеодрайвер отклонил гамма-таблицу.";
             return false;
         }
 
-        var actual = new ushort[RampLength];
         if (!GetDeviceGammaRamp(deviceContext, actual))
         {
             error = "Windows не смогла прочитать гамма-таблицу после применения.";
             return false;
         }
 
-        for (var i = 0; i < RampLength; i++)
+        if (!RampMatches(actual, ramp))
         {
-            if (Math.Abs((int)actual[i] - ramp[i]) > ReadbackTolerance)
-            {
-                error = "Драйвер сообщил об успехе, но фактически не применил запрошенную гамма-таблицу.";
-                return false;
-            }
+            error = "Драйвер сообщил об успехе, но фактически не применил запрошенную гамма-таблицу.";
+            return false;
         }
 
         error = string.Empty;
+        return true;
+    }
+
+    private static bool RampMatches(ushort[] actual, ushort[] expected)
+    {
+        for (var i = 0; i < RampLength; i++)
+        {
+            if (Math.Abs((int)actual[i] - expected[i]) > ReadbackTolerance)
+                return false;
+        }
+
         return true;
     }
 
