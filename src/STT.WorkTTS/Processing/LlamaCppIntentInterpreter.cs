@@ -49,11 +49,12 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
                   "volume_percent": { "type": ["integer", "null"], "minimum": 0, "maximum": 100 },
                   "volume_delta": { "type": ["integer", "null"], "minimum": -100, "maximum": 100 },
                   "text_prompt": { "type": ["string", "null"] },
-                  "process_name": { "type": ["string", "null"], "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9_.-]+$" }
+                  "process_name": { "type": ["string", "null"], "minLength": 1, "maxLength": 64, "pattern": "^[A-Za-z0-9_.-]+$" },
+                  "process_index": { "type": ["integer", "null"], "minimum": 1, "maximum": 30 }
                 },
                 "required": [
                   "duration_seconds", "label", "timer_id", "app_id",
-                  "url", "volume_percent", "volume_delta", "text_prompt", "process_name"
+                  "url", "volume_percent", "volume_delta", "text_prompt", "process_name", "process_index"
                 ]
               },
               "clarification": { "type": ["string", "null"] }
@@ -198,7 +199,9 @@ public sealed class LlamaCppIntentInterpreter : IDisposable
         - Громкость -> audio.set_volume или audio.adjust_volume; mute/unmute -> audio.mute/audio.unmute.
         - Заблокировать ПК -> system.lock; подтверждение запрашивает исполнитель, не модель.
         - Показать запущенные процессы -> process.list.
-        - Корректно закрыть одно приложение -> process.close; process_name — точное имя процесса латиницей без .exe.
+        - Закрыть приложение по имени -> process.close; process_name — точное имя процесса латиницей без .exe, process_index=null.
+        - Если пользователь произносит номер из показанного списка процессов, передай его в process_index (1–30), а process_name=null.
+          Не путай номер списка с PID. Не выдумывай индекс, которого пользователь не называл.
           Никогда не заменяй обычное закрытие на принудительный taskkill. При неоднозначной цели используй clarify.
         - Который час сейчас: локальное время ПК {now:yyyy-MM-dd HH:mm:ss zzz}, зона {TimeZoneInfo.Local.Id}.
 
