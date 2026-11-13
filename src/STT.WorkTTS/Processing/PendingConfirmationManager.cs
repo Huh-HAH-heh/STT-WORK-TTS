@@ -100,7 +100,7 @@ public sealed class PendingConfirmationManager
     private static string Normalize(string text) =>
         Regex.Replace(
             text.Trim().ToLowerInvariant().Replace('ё', 'е'),
-            @"[\\s.!?,]+",
+            @"[\s.!?,]+",
             " ",
             RegexOptions.CultureInvariant).Trim();
 }
