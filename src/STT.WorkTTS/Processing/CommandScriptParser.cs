@@ -6,11 +6,11 @@ namespace STT.WorkTTS.Processing;
 public static class CommandScriptParser
 {
     private static readonly Regex ExplicitCmdPattern = new(
-        @"(?:выполни(?:ть)?|запусти(?:ть)?|введи|исполн(?:и|ить)|выполняй)\\s+(?:команду\\s+)?(?:в\\s+)?(?:cmd|командн\\w*\\s+строк\\w*|консол\\w*)\\s*[:：,-]?\\s*(?<command>.+)$",
+        @"(?:выполни(?:ть)?|запусти(?:ть)?|введи|исполн(?:и|ить)|выполняй)\s+(?:команду\s+)?(?:в\s+)?(?:cmd|командн\w*\s+строк\w*|консол\w*)\s*[:：,-]?\s*(?<command>.+)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ProcessListPattern = new(
-        @"(?:покаж\\w*|вывед\\w*|список|перечисл\\w*)\\s+(?:(?:все|запущенн\\w*)\\s+)*(?:список\\s+)?процесс\\w*|tasklist",
+        @"(?:покаж\w*|вывед\w*|список|перечисл\w*)\s+(?:(?:все|запущенн\w*)\s+)*(?:список\s+)?процесс\w*|tasklist",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex TimerPattern = new(
