@@ -104,7 +104,8 @@ public sealed class DisplayGammaController : IDisposable
             if (_disposed && !_nightModeActive && !_restorationPending)
                 return new CommandResult("Ночная гамма уже выключена.");
 
-            if (_originalRamp is null)
+            var original = _originalRamp;
+            if (original is null)
             {
                 if (!TryLoadSavedRamp(out var loaded, out var loadError))
                 {
@@ -114,11 +115,15 @@ public sealed class DisplayGammaController : IDisposable
                     return new CommandResult("Ночная гамма не включена. Исходная гамма уже используется.");
                 }
 
-                _originalRamp = loaded;
+                if (loaded is null)
+                    return new CommandResult("Файл исходной гаммы пуст. Ничего не изменено.");
+
+                original = loaded;
+                _originalRamp = original;
                 _restorationPending = true;
             }
 
-            if (!TryApplyRamp(_originalRamp, out var error))
+            if (!TryApplyRamp(original, out var error))
             {
                 _restorationPending = true;
                 RecoveryNotice = error;
