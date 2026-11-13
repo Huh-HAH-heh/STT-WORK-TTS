@@ -8,6 +8,7 @@ public static class IntentPlanValidator
         "timer.start", "timer.cancel",
         "app.open", "url.open", "window.show_desktop",
         "audio.set_volume", "audio.adjust_volume", "audio.mute", "audio.unmute",
+        "display.gamma_night", "display.gamma_restore",
         "system.lock",
         "process.list", "process.close",
         "assistant.list_capabilities", "assistant.greeting",
@@ -85,6 +86,8 @@ public static class IntentPlanValidator
             case "window.show_desktop":
             case "audio.mute":
             case "audio.unmute":
+            case "display.gamma_night":
+            case "display.gamma_restore":
             case "system.lock":
             case "assistant.list_capabilities":
             case "assistant.greeting":
@@ -193,6 +196,9 @@ public static class IntentPlanValidator
             "window.show_desktop" => HasAny("рабочий стол", "сверни окна", "свернуть окна", "покажи стол"),
             "audio.set_volume" or "audio.adjust_volume" or "audio.mute" or "audio.unmute" =>
                 HasAny("громк", "тише", "громче", "звук", "беззвуч", "звук"),
+            "display.gamma_night" => HasAny("гамм", "яркост") && HasAny("ночн", "игр", "темн", "светлее"),
+            "display.gamma_restore" => HasAny("гамм", "яркост")
+                && HasAny("верни", "восстанов", "сброс", "отключ", "выключ", "обычн", "исходн", "стар", "прежн"),
             "system.lock" => HasAny("заблок", "блокиров"),
             "process.list" => HasAny("процесс", "tasklist"),
             "process.close" => HasAny("закрой", "закрыть", "заверши", "завершить", "останови", "остановить", "убей")
