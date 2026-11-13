@@ -9,6 +9,14 @@ public static class CommandScriptParser
         @"(?:выполни(?:ть)?|запусти(?:ть)?|введи|исполн(?:и|ить)|выполняй)\s+(?:команду\s+)?(?:в\s+)?(?:cmd|командн\w*\s+строк\w*|консол\w*)\s*[:：,-]?\s*(?<command>.+)$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
+    private static readonly Regex GammaRestorePattern = new(
+        @"^\\s*(?:(?:верни|восстанови|сбрось|отключи|выключи)\\s+(?:(?:исходн\\w*|обычн\\w*|стар\\w*|прежн\\w*)\\s+)?(?:гамм\\w*|яркост\\w*)(?:\\s+экрана)?|(?:верни|восстанови)\\s+(?:старую|исходную|прежнюю)\\s+яркость(?:\\s+экрана)?)\\s*[.!?]*$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex GammaNightPattern = new(
+        @"^\\s*(?:(?:включи|активируй|примени|подними|увеличь)\\s+(?:(?:ночн\\w*|повышенн\\w*)\\s+)?(?:гамм\\w*|яркост\\w*)(?:\\s+экрана)?|(?:ночн\\w*|игров\\w*)\\s+гамм\\w*|сделай\\s+(?:экран\\s+)?ярче(?:\\s+для\\s+игр?)?)\\s*[.!?]*$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex ProcessListPattern = new(
         @"(?:(?:покаж\w*|обнови\w*|вывед\w*|список|перечисл\w*)\s+(?:(?:все|активн\w*|запущенн\w*)\s+)*(?:список\s+)?процесс\w*|(?:активн\w*|запущенн\w*)\s+процесс\w*|tasklist)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -75,6 +83,25 @@ public static class CommandScriptParser
                         }
                     }
                 ]
+            };
+            return true;
+        }
+
+        var normalizedText = text.Trim();
+        if (GammaRestorePattern.IsMatch(normalizedText))
+        {
+            plan = new IntentPlan
+            {
+                Actions = [new IntentCommand { Action = "display.gamma_restore" }]
+            };
+            return true;
+        }
+
+        if (GammaNightPattern.IsMatch(normalizedText))
+        {
+            plan = new IntentPlan
+            {
+                Actions = [new IntentCommand { Action = "display.gamma_night" }]
             };
             return true;
         }
