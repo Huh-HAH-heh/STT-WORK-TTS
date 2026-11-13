@@ -136,14 +136,14 @@ public sealed class WindowsActionExecutor
                 if (pending.TargetProcess is not null)
                 {
                     Process? target = null;
-                    var error = string.Empty;
+                    var targetError = string.Empty;
                     if (validation!.TargetProcess is null
                         || validation.TargetProcess.ProcessId != pending.TargetProcess.ProcessId
-                        || !_processes.TryResolveSameProcess(pending.TargetProcess, out target, out error))
+                        || !_processes.TryResolveSameProcess(pending.TargetProcess, out target, out targetError))
                     {
-                        return new CommandResult(error.Length == 0
+                        return new CommandResult(targetError.Length == 0
                             ? "Цель команды изменилась после подтверждения. Действие отменено."
-                            : error);
+                            : targetError);
                     }
 
                     target!.Dispose();
