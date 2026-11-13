@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace STT.WorkTTS.Processing;
 
 public sealed record PendingConfirmation(
@@ -96,7 +98,9 @@ public sealed class PendingConfirmationManager
     }
 
     private static string Normalize(string text) =>
-        string.Join(' ', text.Trim().ToLowerInvariant().Replace('ё', 'е')
-            .Trim('.', '!', '?', ',', ' '))
-        .Replace("  ", " ", StringComparison.Ordinal);
+        Regex.Replace(
+            text.Trim().ToLowerInvariant().Replace('ё', 'е'),
+            @"[\\s.!?,]+",
+            " ",
+            RegexOptions.CultureInvariant).Trim();
 }
