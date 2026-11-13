@@ -10,7 +10,11 @@ public static class CommandScriptParser
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ProcessListPattern = new(
-        @"(?:покаж\w*|вывед\w*|список|перечисл\w*)\s+(?:(?:все|запущенн\w*)\s+)*(?:список\s+)?процесс\w*|tasklist",
+        @"(?:(?:покаж\w*|обнови\w*|вывед\w*|список|перечисл\w*)\s+(?:(?:все|активн\w*|запущенн\w*)\s+)*(?:список\s+)?процесс\w*|(?:активн\w*|запущенн\w*)\s+процесс\w*|tasklist)",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex ProcessCloseByIndexPattern = new(
+        @"(?:закрой|закрыть|заверши|завершить|останови|остановить|убей|убить)\s+(?:процесс|приложение|программу)\s+(?:(?:под\s+)?(?:номер(?:ом)?|индекс(?:ом)?)\s*)?(?<index>\d{1,2}|[а-яё]+(?:\s+[а-яё]+)?)\s*[.!?]?$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex TimerPattern = new(
@@ -40,7 +44,17 @@ public static class CommandScriptParser
         ["девятнадцать"] = 19, ["двадцать"] = 20, ["тридцать"] = 30,
         ["сорок"] = 40, ["пятьдесят"] = 50, ["шестьдесят"] = 60,
         ["семьдесят"] = 70, ["восемьдесят"] = 80, ["девяносто"] = 90,
-        ["сто"] = 100
+        ["сто"] = 100,
+        ["первый"] = 1, ["первого"] = 1, ["первая"] = 1,
+        ["второй"] = 2, ["второго"] = 2, ["вторая"] = 2,
+        ["третий"] = 3, ["третьего"] = 3, ["третья"] = 3,
+        ["четвертый"] = 4, ["четвертого"] = 4, ["четвертая"] = 4,
+        ["пятый"] = 5, ["пятого"] = 5, ["пятая"] = 5,
+        ["шестой"] = 6, ["шестого"] = 6, ["шестая"] = 6,
+        ["седьмой"] = 7, ["седьмого"] = 7, ["седьмая"] = 7,
+        ["восьмой"] = 8, ["восьмого"] = 8, ["восьмая"] = 8,
+        ["девятый"] = 9, ["девятого"] = 9, ["девятая"] = 9,
+        ["десятый"] = 10, ["десятого"] = 10, ["десятая"] = 10
     };
 
     public static bool TryParse(string text, out IntentPlan plan)
@@ -59,6 +73,25 @@ public static class CommandScriptParser
                         {
                             CommandLine = cmdMatch.Groups["command"].Value.Trim()
                         }
+                    }
+                ]
+            };
+            return true;
+        }
+
+        var processCloseMatch = ProcessCloseByIndexPattern.Match(text.Trim());
+        if (processCloseMatch.Success
+            && TryParseNumber(processCloseMatch.Groups["index"].Value, out var processIndex)
+            && processIndex is >= 1 and <= 30)
+        {
+            plan = new IntentPlan
+            {
+                Actions =
+                [
+                    new IntentCommand
+                    {
+                        Action = "process.close",
+                        Arguments = new IntentArguments { ProcessIndex = processIndex }
                     }
                 ]
             };
