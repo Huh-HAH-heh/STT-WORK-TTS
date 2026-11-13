@@ -69,7 +69,7 @@ internal static class Program
             using var fastInterpreter = new LlamaCppIntentInterpreter(settings.Intent);
             using var heavyInterpreter = new LlamaCppIntentInterpreter(settings.Generation.ToIntentSettings());
             using var textGenerator = new LlamaCppTextGenerator(settings.Generation, appDirectory);
-            var executor = new WindowsActionExecutor(timers);
+            using var executor = new WindowsActionExecutor(timers);
             ICommandProcessor processor = settings.Intent.Enabled
                 ? new NeuralCommandProcessor(
                     fastInterpreter,
@@ -254,11 +254,12 @@ internal static class Program
         using var heavyInterpreter = new LlamaCppIntentInterpreter(settings.Generation.ToIntentSettings());
         using var textGenerator = new LlamaCppTextGenerator(settings.Generation, AppContext.BaseDirectory);
         var local = new LocalCommandProcessor(settings.Work, AppContext.BaseDirectory);
+        using var executor = new WindowsActionExecutor(timers);
         var processor = new NeuralCommandProcessor(
             fastInterpreter,
             heavyInterpreter,
             textGenerator,
-            new WindowsActionExecutor(timers),
+            executor,
             local,
             AppContext.BaseDirectory);
 
