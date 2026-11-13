@@ -23,4 +23,6 @@ public sealed class IntentArguments
     public int? VolumePercent { get; init; }
     public int? VolumeDelta { get; init; }
     public string? TextPrompt { get; init; }
+    public string? ProcessName { get; init; }
+    public string? CommandLine { get; init; }
 }
