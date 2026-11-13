@@ -229,6 +229,25 @@ public static class IntentPlanValidator
             ["двадцать"] = 20
         };
 
+    private static readonly IReadOnlyDictionary<string, int> SpokenIndexes =
+        new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["один"] = 1, ["одна"] = 1, ["одну"] = 1, ["первый"] = 1, ["первого"] = 1, ["первая"] = 1,
+            ["два"] = 2, ["две"] = 2, ["второй"] = 2, ["второго"] = 2, ["вторая"] = 2,
+            ["три"] = 3, ["третий"] = 3, ["третьего"] = 3, ["третья"] = 3,
+            ["четыре"] = 4, ["четвертый"] = 4, ["четвертого"] = 4, ["четвертая"] = 4,
+            ["пять"] = 5, ["пятый"] = 5, ["пятого"] = 5, ["пятая"] = 5,
+            ["шесть"] = 6, ["шестой"] = 6, ["шестого"] = 6, ["шестая"] = 6,
+            ["семь"] = 7, ["седьмой"] = 7, ["седьмого"] = 7, ["седьмая"] = 7,
+            ["восемь"] = 8, ["восьмой"] = 8, ["восьмого"] = 8, ["восьмая"] = 8,
+            ["девять"] = 9, ["девятый"] = 9, ["девятого"] = 9, ["девятая"] = 9,
+            ["десять"] = 10, ["десятый"] = 10, ["десятого"] = 10, ["десятая"] = 10,
+            ["одиннадцать"] = 11, ["двенадцать"] = 12, ["тринадцать"] = 13,
+            ["четырнадцать"] = 14, ["пятнадцать"] = 15, ["шестнадцать"] = 16,
+            ["семнадцать"] = 17, ["восемнадцать"] = 18, ["девятнадцать"] = 19,
+            ["двадцать"] = 20, ["тридцать"] = 30
+        };
+
     private static bool ProcessIndexIsMentioned(string text, int index)
     {
         if (!text.Contains("процесс", StringComparison.Ordinal)
@@ -238,7 +257,7 @@ public static class IntentPlanValidator
 
         var match = System.Text.RegularExpressions.Regex.Match(
             text,
-            @"\\b(?:номер|индекс)(?:ом)?\\s+(?<value>\\d{1,2}|[а-яё]+(?:\\s+[а-яё]+)?)\\b",
+            @"\b(?:номер|индекс)(?:ом)?\s+(?<value>\d{1,2}|[а-яё]+(?:\s+[а-яё]+)?)\b",
             System.Text.RegularExpressions.RegexOptions.CultureInvariant);
 
         if (!match.Success)
@@ -252,12 +271,12 @@ public static class IntentPlanValidator
             return wordIndex == index;
 
         var compound = spokenValue.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (compound.Length == 2
+        return compound.Length == 2
             && SpokenIndexes.TryGetValue(compound[0], out var tens)
-            && int.TryParse(compound[1], out _))
-            return false;
-
-        return false;
+            && tens >= 20
+            && SpokenIndexes.TryGetValue(compound[1], out var units)
+            && units is >= 1 and <= 9
+            && tens + units == index;
     }
 
     private static bool ProcessIsMentioned(string text, string? processName)
