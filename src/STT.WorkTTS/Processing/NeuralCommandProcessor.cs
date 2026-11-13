@@ -38,6 +38,10 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
         if (string.IsNullOrWhiteSpace(text))
             return new CommandResult("Не удалось распознать речь. Повтори, пожалуйста.");
 
+        var confirmationResult = await _executor.HandleConfirmationAsync(text, cancellationToken);
+        if (confirmationResult is not null)
+            return confirmationResult;
+
         IntentPlan plan;
         if (CommandScriptParser.TryParse(text, out var fastPlan))
         {
