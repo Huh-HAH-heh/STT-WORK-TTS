@@ -10,11 +10,11 @@ public static class CommandScriptParser
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex GammaRestorePattern = new(
-        @"^\\s*(?:(?:верни|восстанови|сбрось|отключи|выключи)\\s+(?:(?:исходн\\w*|обычн\\w*|стар\\w*|прежн\\w*)\\s+)?(?:гамм\\w*|яркост\\w*)(?:\\s+экрана)?|(?:верни|восстанови)\\s+(?:старую|исходную|прежнюю)\\s+яркость(?:\\s+экрана)?)\\s*[.!?]*$",
+        @"^\s*(?:(?:верни|восстанови|сбрось|отключи|выключи)\s+(?:(?:исходн\w*|обычн\w*|стар\w*|прежн\w*)\s+)?(?:гамм\w*|яркост\w*)(?:\s+экрана)?|(?:верни|восстанови)\s+(?:старую|исходную|прежнюю)\s+яркость(?:\s+экрана)?)\s*[.!?]*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex GammaNightPattern = new(
-        @"^\\s*(?:(?:включи|активируй|примени|подними|увеличь)\\s+(?:(?:ночн\\w*|повышенн\\w*)\\s+)?(?:гамм\\w*|яркост\\w*)(?:\\s+экрана)?|(?:ночн\\w*|игров\\w*)\\s+гамм\\w*|сделай\\s+(?:экран\\s+)?ярче(?:\\s+для\\s+игр?)?)\\s*[.!?]*$",
+        @"^\s*(?:(?:включи|активируй|примени|подними|увеличь)\s+(?:(?:ночн\w*|повышенн\w*)\s+)?(?:гамм\w*|яркост\w*)(?:\s+экрана)?|(?:ночн\w*|игров\w*)\s+гамм\w*|сделай\s+(?:экран\s+)?ярче(?:\s+для\s+игр?)?)\s*[.!?]*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex ProcessListPattern = new(
