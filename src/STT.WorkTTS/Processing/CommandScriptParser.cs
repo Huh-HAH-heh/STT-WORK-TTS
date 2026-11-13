@@ -5,6 +5,14 @@ namespace STT.WorkTTS.Processing;
 
 public static class CommandScriptParser
 {
+    private static readonly Regex ExplicitCmdPattern = new(
+        @"(?:выполни(?:ть)?|запусти(?:ть)?|введи|исполн(?:и|ить)|выполняй)\\s+(?:команду\\s+)?(?:в\\s+)?(?:cmd|командн\\w*\\s+строк\\w*|консол\\w*)\\s*[:：,-]?\\s*(?<command>.+)$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+    private static readonly Regex ProcessListPattern = new(
+        @"(?:покаж\\w*|вывед\\w*|список|перечисл\\w*)\\s+(?:(?:все|запущенн\\w*)\\s+)*(?:список\\s+)?процесс\\w*|tasklist",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
     private static readonly Regex TimerPattern = new(
         @"(?:(?:поставь|включи|запусти|создай|установи)\s+)?(?:(?:еще|ещё)\s+один\s+)?таймер\s+(?:на|через)\s+(?<number>\d+(?:[.,]\d+)?|[а-яё]+(?:\s+[а-яё]+)?)\s+(?<unit>секунд\w*|сек\w*|с|минут\w*|мин\w*|час\w*)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
@@ -37,6 +45,36 @@ public static class CommandScriptParser
 
     public static bool TryParse(string text, out IntentPlan plan)
     {
+        var cmdMatch = ExplicitCmdPattern.Match(text);
+        if (cmdMatch.Success)
+        {
+            plan = new IntentPlan
+            {
+                Actions =
+                [
+                    new IntentCommand
+                    {
+                        Action = "console.run",
+                        Arguments = new IntentArguments
+                        {
+                            CommandLine = cmdMatch.Groups["command"].Value.Trim()
+                        }
+                    }
+                ]
+            };
+            return true;
+        }
+
+        var processListMatch = ProcessListPattern.Match(text);
+        if (processListMatch.Success)
+        {
+            plan = new IntentPlan
+            {
+                Actions = [new IntentCommand { Action = "process.list" }]
+            };
+            return true;
+        }
+
         var commands = new List<(int Position, IntentCommand Command)>();
         var recognizedTimerMatches = new List<Match>();
 
