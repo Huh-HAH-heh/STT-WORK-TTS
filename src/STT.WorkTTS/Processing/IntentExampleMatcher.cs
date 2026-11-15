@@ -120,13 +120,13 @@ internal sealed class IntentExampleMatcher
         if (StartsWithAny(token, "браузер")) return "браузер";
         if (StartsWithAny(token, "настройк")) return "настройки";
 
-        if (StartsWithAny(token, "включ", "активир", "примен", "давай"))
+        if (StartsWithAny(token, "включ", "вруб", "активир", "примен", "давай", "сдела"))
             return "$activate";
-        if (StartsWithAny(token, "подним", "увелич", "прибав", "повыс", "поярч", "ярче", "погромч", "громче"))
+        if (StartsWithAny(token, "подним", "увелич", "прибав", "повыс", "поярч", "освет", "светл", "ярче", "погромч", "громче"))
             return "$increase";
         if (StartsWithAny(token, "выключ", "отключ", "выруб", "убер", "сним", "заглуш"))
             return "$disable";
-        if (StartsWithAny(token, "верн", "восстанов", "сброс", "возврат", "обычн", "исходн", "стандарт"))
+        if (StartsWithAny(token, "верн", "восстанов", "сброс", "возврат", "обычн", "норм", "исходн", "стандарт", "откат"))
             return "$restore";
         if (StartsWithAny(token, "откро", "откры", "запуст", "перейд", "зайд"))
             return "$open";
@@ -138,7 +138,7 @@ internal sealed class IntentExampleMatcher
             return "$lock";
         if (StartsWithAny(token, "убав", "уменьш", "сниз", "тише"))
             return "$decrease";
-        if (token.StartsWith("постав", StringComparison.Ordinal))
+        if (StartsWithAny(token, "постав", "установ", "выстав"))
             return "$set";
 
         foreach (var ending in RussianEndings)

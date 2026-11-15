@@ -185,6 +185,28 @@ public sealed class RuBertIntentInterpreter : IDisposable
             else
             {
                 plan = BuildPlan(transcription, predictedLabel);
+                if (plan.Actions.Count == 0
+                    && _exampleMatcher.TryResolve(transcription, out var alternateLabel, out var alternateScore)
+                    && alternateLabel != predictedLabel)
+                {
+                    var alternatePlan = BuildPlan(transcription, alternateLabel);
+                    if (alternatePlan.Actions.Count > 0)
+                    {
+                        try
+                        {
+                            IntentPlanValidator.Validate(transcription, alternatePlan);
+                            plan = alternatePlan;
+                            PerformanceLog.Event(
+                                "intent.semantic_example.recovered_empty_plan",
+                                $"from={predictedLabel};to={alternateLabel};similarity={alternateScore:F2}");
+                        }
+                        catch (InvalidDataException)
+                        {
+                            // Keep the original clarification; an ungrounded alternative must not execute.
+                        }
+                    }
+                }
+
                 if (plan.Actions.Count > 0)
                 {
                     try
