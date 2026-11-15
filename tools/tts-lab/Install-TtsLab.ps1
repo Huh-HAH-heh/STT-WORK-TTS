@@ -75,8 +75,8 @@ function Install-PiperAssets {
             $TemporaryConfig = "$ConfigPath.download"
             Remove-Item $TemporaryModel, $TemporaryConfig -Force -ErrorAction SilentlyContinue
 
-            $ModelUri = "\${Base}/\${ModelName}?download=true"
-            $ConfigUri = "\${Base}/\${ModelName}.json?download=true"
+            $ModelUri = $($Base)/$($ModelName)?download=true
+            $ConfigUri = $($Base)/$($ModelName).json?download=true
             try {
                 Invoke-WebRequest -UseBasicParsing -Uri $ModelUri -OutFile $TemporaryModel
                 Invoke-WebRequest -UseBasicParsing -Uri $ConfigUri -OutFile $TemporaryConfig
@@ -120,7 +120,8 @@ function Install-PiperAssets {
 
         if ((Get-Item $ModelPath).Length -lt 10000000) { throw "Модель Piper $Voice скачана не полностью." }
         if ((Get-Item $ConfigPath).Length -lt 1000) { throw "Конфигурация Piper $Voice скачана не полностью." }
-    }}
+    }
+}
 
 function Install-XVibe {
     $Source = Join-Path $LabRoot "vendor\xVibePocketTTS"
