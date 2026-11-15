@@ -182,3 +182,53 @@
 {"text":"Запусти неизвестную программу","label":"unknown"}
 {"text":"Сделай то, что я вчера просил, но другое","label":"unknown"}
 {"text":"Найди что-нибудь и запусти","label":"unknown"}
+{"text":"Назови время прямо сейчас","label":"system.get_time"}
+{"text":"Сколько сейчас на часах","label":"system.get_time"}
+{"text":"Какое сегодня число и месяц","label":"system.get_date"}
+{"text":"Скажи сегодняшние число и время","label":"system.get_datetime"}
+{"text":"Поставь отсчёт на 20 секунд","label":"timer.start"}
+{"text":"Мне нужен обратный отсчёт на 3 минуты","label":"timer.start"}
+{"text":"Останови обратный отсчёт таймера","label":"timer.cancel"}
+{"text":"Сбрось отсчёт таймера","label":"timer.cancel"}
+{"text":"Дай мне блокнот","label":"app.open"}
+{"text":"Вызови калькулятор","label":"app.open"}
+{"text":"Покажи проводник","label":"app.open"}
+{"text":"Открой панель настроек Windows","label":"app.open"}
+{"text":"Зайди на сайт github.com","label":"url.open"}
+{"text":"Открой страницу wikipedia.org","label":"url.open"}
+{"text":"Спрячь все окна на рабочий стол","label":"window.show_desktop"}
+{"text":"Убери окна с экрана и покажи стол","label":"window.show_desktop"}
+{"text":"Сделай звук на 50 процентов","label":"audio.set_volume"}
+{"text":"Добавь звука","label":"audio.adjust_volume"}
+{"text":"Уменьши звук на десять процентов","label":"audio.adjust_volume"}
+{"text":"Выруби звук","label":"audio.mute"}
+{"text":"Заглуши аудио","label":"audio.mute"}
+{"text":"Верни звук обратно","label":"audio.unmute"}
+{"text":"Включи аудио обратно","label":"audio.unmute"}
+{"text":"Подсвети тёмные участки в игре гаммой","label":"display.gamma_night"}
+{"text":"Повысь гамму экрана","label":"display.gamma_night"}
+{"text":"Сделай картинку ярче с помощью гаммы","label":"display.gamma_night"}
+{"text":"Активируй повышение гаммы","label":"display.gamma_night"}
+{"text":"Поставь гамму на максимум","label":"display.gamma_night"}
+{"text":"Осветли изображение в тёмной игре","label":"display.gamma_night"}
+{"text":"Верни гамму в нормальное состояние","label":"display.gamma_restore"}
+{"text":"Откати изменение гаммы","label":"display.gamma_restore"}
+{"text":"Верни стандартную яркость экрана","label":"display.gamma_restore"}
+{"text":"Убери повышенную гамму","label":"display.gamma_restore"}
+{"text":"Восстанови прежнюю картинку","label":"display.gamma_restore"}
+{"text":"Сбрось экранную гамму к исходной","label":"display.gamma_restore"}
+{"text":"Заблокируй рабочий компьютер","label":"system.lock"}
+{"text":"Перейди к блокировке Windows","label":"system.lock"}
+{"text":"Отобрази работающие программы","label":"process.list"}
+{"text":"Какие приложения сейчас запущены","label":"process.list"}
+{"text":"Покажи что работает в фоне","label":"process.list"}
+{"text":"Заверши Discord","label":"process.close"}
+{"text":"Выключи процесс Steam","label":"process.close"}
+{"text":"Закрой приложение Хром","label":"process.close"}
+{"text":"Назови все доступные функции","label":"assistant.list_capabilities"}
+{"text":"Какие операции доступны","label":"assistant.list_capabilities"}
+{"text":"Здорово, помощник","label":"assistant.greeting"}
+{"text":"Что такое локальная нейросеть","label":"assistant.answer"}
+{"text":"Почему компьютер может зависать","label":"assistant.answer"}
+{"text":"Напиши небольшое описание программы","label":"assistant.generate_text"}
+{"text":"Составь сообщение для преподавателя","label":"assistant.generate_text"}

@@ -18,5 +18,9 @@
   <ItemGroup>
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="appsettings.laptop.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\tools\intent\dataset\commands.jsonl"
+             Link="intent\commands.jsonl"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

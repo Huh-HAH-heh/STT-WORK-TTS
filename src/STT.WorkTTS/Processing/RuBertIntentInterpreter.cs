@@ -20,6 +20,7 @@ public sealed class RuBertIntentInterpreter : IDisposable
     private readonly int _sequenceLength;
     private readonly float _confidenceThreshold;
     private readonly long _padTokenId;
+    private readonly IntentExampleMatcher _exampleMatcher;
 
     public RuBertIntentInterpreter(IntentSettings settings, string appDirectory)
     {
@@ -57,7 +58,6 @@ public sealed class RuBertIntentInterpreter : IDisposable
                 RemoveNonSpacingMarks = false
             });
 
-        // The published RuBERT-tiny2 tokenizer uses [PAD] id 0.
         _padTokenId = 0;
 
         var options = new SessionOptions
@@ -83,6 +83,9 @@ public sealed class RuBertIntentInterpreter : IDisposable
         if (_session.OutputMetadata[LogitsOutput].Dimensions.LastOrDefault() != _labels.Length)
             throw new InvalidDataException(
                 $"Число выходов модели не совпадает с labels.json: {_labels.Length}.");
+
+        _exampleMatcher = new IntentExampleMatcher(
+            AppPaths.Resolve(appDirectory, "intent/commands.jsonl"));
     }
 
     public Task<IntentPlan> InterpretAsync(
@@ -143,14 +146,46 @@ public sealed class RuBertIntentInterpreter : IDisposable
             }
 
             var confidence = SoftmaxProbability(logits, bestIndex);
-            var label = _labels[bestIndex];
+            var predictedLabel = _labels[bestIndex];
             PerformanceLog.Event(
                 "intent.rubert.prediction",
-                $"label={label};confidence={confidence:F3}");
+                $"label={predictedLabel};confidence={confidence:F3}");
 
-            var plan = confidence < _confidenceThreshold
-                ? Clarify($"Не уверена, какую функцию ты имеешь в виду (уверенность {confidence:P0}). Переформулируй команду.")
-                : BuildPlan(transcription, label);
+            IntentPlan plan;
+            if (confidence < _confidenceThreshold)
+            {
+                if (_exampleMatcher.TryResolve(transcription, out var matchedLabel, out var similarity))
+                {
+                    plan = BuildPlan(transcription, matchedLabel);
+                    if (plan.Actions.Count > 0)
+                    {
+                        try
+                        {
+                            IntentPlanValidator.Validate(transcription, plan);
+                            PerformanceLog.Event(
+                                "intent.semantic_example.fallback",
+                                $"label={matchedLabel};similarity={similarity:F2}");
+                        }
+                        catch (InvalidDataException)
+                        {
+                            plan = Clarify(
+                                "Я распознала объект, но не уверена в действии. Скажи отдельно, что с ним сделать.");
+                        }
+                    }
+                }
+                else
+                {
+                    PerformanceLog.Event(
+                        "intent.semantic_example.no_match",
+                        $"classifier={predictedLabel};confidence={confidence:F3}");
+                    plan = Clarify(
+                        "Я не смогла определить действие по этой фразе. Повтори её другими словами, назвав объект и действие.");
+                }
+            }
+            else
+            {
+                plan = BuildPlan(transcription, predictedLabel);
+            }
 
             if (plan.Actions.Count > 0)
                 IntentPlanValidator.Validate(transcription, plan);
@@ -257,7 +292,7 @@ public sealed class RuBertIntentInterpreter : IDisposable
                 break;
 
             default:
-                return Clarify("Пока не знаю такую команду. Скажи «помощь», чтобы услышать список возможностей.");
+                return Clarify("Пока не знаю такую команду. Скажи «помощь», чтобы услышать список доступных действий.");
         }
 
         return new IntentPlan

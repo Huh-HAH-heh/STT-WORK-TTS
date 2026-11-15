@@ -190,15 +190,18 @@ public static class IntentPlanValidator
             "system.get_datetime" => HasAny("дат", "врем", "который час"),
             "timer.start" => text.Contains("таймер"),
             "timer.cancel" => text.Contains("таймер") && HasAny("отмен", "останов", "сброс"),
-            "app.open" => HasAny("открой", "открыть", "запусти", "запустить", "включи")
+            "app.open" => HasAny("открой", "открыть", "запусти", "запустить", "включи", "покажи", "вызови", "дай")
                 && AppIsMentioned(text, command.Arguments.AppId!),
             "url.open" => HasAny("открой", "открыть", "перейди", "зайди", "сайт", "ссылк", "точка", ".com", ".ru", "www."),
-            "window.show_desktop" => HasAny("рабочий стол", "сверни окна", "свернуть окна", "покажи стол"),
+            "window.show_desktop" => HasAny("рабочий стол", "сверни окна", "свернуть окна", "покажи стол", "убери окна"),
             "audio.set_volume" or "audio.adjust_volume" or "audio.mute" or "audio.unmute" =>
-                HasAny("громк", "тише", "громче", "звук", "беззвуч", "звук"),
-            "display.gamma_night" => HasAny("гамм", "яркост") && HasAny("ночн", "игр", "темн", "светлее"),
-            "display.gamma_restore" => HasAny("гамм", "яркост")
-                && HasAny("верни", "восстанов", "сброс", "отключ", "выключ", "обычн", "исходн", "стар", "прежн"),
+                HasAny("громк", "тише", "громче", "звук", "беззвуч", "прибав", "убав", "уменьш", "сниз"),
+            "display.gamma_night" =>
+                HasAny("гамм", "яркост")
+                && HasAny("ночн", "игр", "темн", "светлее", "включ", "актив", "примен", "подним", "увелич", "поярч", "ярче", "максим"),
+            "display.gamma_restore" =>
+                HasAny("гамм", "яркост")
+                && HasAny("верни", "восстанов", "сброс", "отключ", "выключ", "выруб", "убер", "сним", "обычн", "исходн", "стар", "прежн"),
             "system.lock" => HasAny("заблок", "блокиров"),
             "process.list" => HasAny("процесс", "tasklist"),
             "process.close" => HasAny("закрой", "закрыть", "заверши", "завершить", "останови", "остановить", "убей")
@@ -304,4 +307,6 @@ public static class IntentPlanValidator
         "settings" => text.Contains("настройк"),
         _ => false
     };
+
+    public void Dispose() => _session.Dispose();
 }
