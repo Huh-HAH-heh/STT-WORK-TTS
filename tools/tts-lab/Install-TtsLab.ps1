@@ -66,7 +66,13 @@ function Install-PiperAssets {
             Write-Host "Скачивание Piper: $Voice"
             $TemporaryModel = "$ModelPath.download"
             if (Test-Path $TemporaryModel) { Remove-Item $TemporaryModel -Force }
-            Invoke-WebRequest -UseBasicParsing -Uri "$Base/$ModelName?download=true" -OutFile $TemporaryModel
+            $ModelUri = "${Base}/${ModelName}?download=true"
+            try {
+                Invoke-WebRequest -UseBasicParsing -Uri $ModelUri -OutFile $TemporaryModel
+            }
+            catch {
+                throw "Не удалось скачать Piper ONNX '$Voice' по адресу '$ModelUri': $($_.Exception.Message)"
+            }
             if ((Get-Item $TemporaryModel).Length -lt 10000000) { throw "Модель Piper $Voice скачана не полностью." }
             Move-Item $TemporaryModel $ModelPath -Force
         }
@@ -74,7 +80,13 @@ function Install-PiperAssets {
             if (Test-Path $ConfigPath) { Remove-Item $ConfigPath -Force }
             $TemporaryConfig = "$ConfigPath.download"
             if (Test-Path $TemporaryConfig) { Remove-Item $TemporaryConfig -Force }
-            Invoke-WebRequest -UseBasicParsing -Uri "$Base/$ModelName.json?download=true" -OutFile $TemporaryConfig
+            $ConfigUri = "${Base}/${ModelName}.json?download=true"
+            try {
+                Invoke-WebRequest -UseBasicParsing -Uri $ConfigUri -OutFile $TemporaryConfig
+            }
+            catch {
+                throw "Не удалось скачать конфигурацию Piper '$Voice' по адресу '$ConfigUri': $($_.Exception.Message)"
+            }
             if ((Get-Item $TemporaryConfig).Length -lt 1000) { throw "Конфигурация Piper $Voice скачана не полностью." }
             Move-Item $TemporaryConfig $ConfigPath -Force
         }
