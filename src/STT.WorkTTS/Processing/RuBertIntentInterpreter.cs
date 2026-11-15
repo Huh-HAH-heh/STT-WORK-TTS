@@ -185,6 +185,41 @@ public sealed class RuBertIntentInterpreter : IDisposable
             else
             {
                 plan = BuildPlan(transcription, predictedLabel);
+                if (plan.Actions.Count > 0)
+                {
+                    try
+                    {
+                        IntentPlanValidator.Validate(transcription, plan);
+                    }
+                    catch (InvalidDataException)
+                    {
+                        if (_exampleMatcher.TryResolve(transcription, out var semanticLabel, out var semanticScore)
+                            && semanticLabel != predictedLabel)
+                        {
+                            var semanticPlan = BuildPlan(transcription, semanticLabel);
+                            try
+                            {
+                                if (semanticPlan.Actions.Count > 0)
+                                    IntentPlanValidator.Validate(transcription, semanticPlan);
+
+                                plan = semanticPlan;
+                                PerformanceLog.Event(
+                                    "intent.semantic_example.corrected_prediction",
+                                    $"from={predictedLabel};to={semanticLabel};similarity={semanticScore:F2}");
+                            }
+                            catch (InvalidDataException)
+                            {
+                                plan = Clarify(
+                                    "Я распознала фразу, но не смогла надёжно подтвердить действие. Уточни, что именно нужно сделать.");
+                            }
+                        }
+                        else
+                        {
+                            plan = Clarify(
+                                "Я не смогла подтвердить смысл команды. Повтори её другими словами, назвав объект и действие.");
+                        }
+                    }
+                }
             }
 
             if (plan.Actions.Count > 0)
