@@ -42,7 +42,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\tts-lab\Install-TtsL
 
 Установка создаёт отдельные Python-окружения и скачивает модели. Это может занять несколько гигабайт. Если один движок не установится, скрипт продолжит установку остальных и выведет список ошибок; уже установленные движки останутся доступны.
 
-Установить только один движок можно так:
+Для обычного запуска профиля laptop устанавливается только Piper CLI и голос Denis (около 63 МБ):
+
+~~~powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\tts-lab\Install-TtsLab.ps1 -Engine piper
+~~~
+
+Для сравнения всех четырёх голосов Piper:
+
+~~~powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\tts-lab\Install-TtsLab.ps1 -Engine piper -AllPiperVoices
+~~~
+
+Установить только другой движок можно так:
 
 ~~~powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\tts-lab\Install-TtsLab.ps1 -Engine silero

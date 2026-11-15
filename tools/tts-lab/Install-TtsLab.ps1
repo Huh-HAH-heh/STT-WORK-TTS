@@ -1,5 +1,8 @@
 ﻿[CmdletBinding()]
-param([ValidateSet("all", "piper", "xvibe", "silero", "vosk", "xtts")][string]$Engine = "all")
+param(
+    [ValidateSet("all", "piper", "xvibe", "silero", "vosk", "xtts")][string]$Engine = "all",
+    [switch]$AllPiperVoices
+)
 
 $ErrorActionPreference = "Stop"
 $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
@@ -30,7 +33,7 @@ function New-PythonEnvironment {
 
 function Install-PiperAssets {
     $PiperRoot = Join-Path $AssetsRoot "piper"
-    $VoiceRoot = Join-Path $ModelRoot "piper"
+    $VoiceRoot = Join-Path $AssetsRoot "voices"
     $TempRoot = Join-Path $LabRoot "tmp\piper"
     New-Item -ItemType Directory -Force -Path $PiperRoot, $VoiceRoot, $TempRoot | Out-Null
 
@@ -45,19 +48,46 @@ function Install-PiperAssets {
         Copy-Item (Join-Path $Exe.Directory.FullName "*") $PiperRoot -Recurse -Force
     }
 
-    foreach ($Voice in @("denis", "dmitri", "irina", "ruslan")) {
+    $VoiceNames = if ($AllPiperVoices -or $Engine -eq "all") {
+        @("denis", "dmitri", "irina", "ruslan")
+    }
+    else {
+        @("denis")
+    }
+
+    foreach ($Voice in $VoiceNames) {
         $ModelName = "ru_RU-$Voice-medium.onnx"
         $ModelPath = Join-Path $VoiceRoot $ModelName
         $ConfigPath = "$ModelPath.json"
-        $Base = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/ru/ru_RU/$Voice/medium"
+        # The v1.0.0 path is no longer available; current voice files are published on main.
+        $Base = "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/$Voice/medium"
         if (-not (Test-Path $ModelPath)) {
             Write-Host "Скачивание Piper: $Voice"
-            Invoke-WebRequest -UseBasicParsing -Uri "$Base/$ModelName?download=true" -OutFile $ModelPath
+            $TemporaryModel = "$ModelPath.download"
+            if (Test-Path $TemporaryModel) { Remove-Item $TemporaryModel -Force }
+            Invoke-WebRequest -UseBasicParsing -Uri "$Base/$ModelName?download=true" -OutFile $TemporaryModel
+            if ((Get-Item $TemporaryModel).Length -lt 10000000) { throw "Модель Piper $Voice скачана не полностью." }
+            Move-Item $TemporaryModel $ModelPath -Force
         }
         if (-not (Test-Path $ConfigPath)) {
-            Invoke-WebRequest -UseBasicParsing -Uri "$Base/$ModelName.json?download=true" -OutFile $ConfigPath
+            $TemporaryConfig = "$ConfigPath.download"
+            if (Test-Path $TemporaryConfig) { Remove-Item $TemporaryConfig -Force }
+            Invoke-WebRequest -UseBasicParsing -Uri "$Base/$ModelName.json?download=true" -OutFile $TemporaryConfig
+            if ((Get-Item $TemporaryConfig).Length -lt 1000) { throw "Конфигурация Piper $Voice скачана не полностью." }
+            Move-Item $TemporaryConfig $ConfigPath -Force
         }
-        if ((Get-Item $ModelPath).Length -lt 1000000) { throw "Модель Piper $Voice скачана не полностью." }
+        if ((Get-Item $ModelPath).Length -lt 10000000) { throw "Модель Piper $Voice скачана не полностью." }
+        if ((Get-Item $ConfigPath).Length -lt 1000) { throw "Конфигурация Piper $Voice скачана не полностью." }
+        try {
+            $VoiceConfig = Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
+            if (-not $VoiceConfig.audio -or -not $VoiceConfig.phoneme_id_map) {
+                throw "В конфигурации отсутствуют поля audio или phoneme_id_map."
+            }
+        }
+        catch {
+            throw "Конфигурация Piper $Voice повреждена: $($_.Exception.Message)"
+        }
+        Write-Host "Готов голос: $ModelName" -ForegroundColor Green
     }
 }
 

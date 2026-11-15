@@ -23,7 +23,8 @@ function Write-Step([string]$Message) {
 function Invoke-SetupScript([string]$Path, [string[]]$Arguments = @()) {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $Path @Arguments
     if ($LASTEXITCODE -ne 0) {
-        throw "Подготовка завершилась с кодом \${LASTEXITCODE}: $Path"
+        $SetupExitCode = $LASTEXITCODE
+        throw "Подготовка завершилась с кодом $($SetupExitCode): $Path"
     }
 }
 
@@ -221,9 +222,13 @@ if (-not $SkipTts) {
     elseif ($TtsEngine -eq "piper") {
         $PiperExe = Join-Path $Root "assets\piper\piper.exe"
         $PiperVoice = Join-Path $Root "assets\voices\ru_RU-denis-medium.onnx"
-        if (-not (Test-Path $PiperExe) -or -not (Test-Path $PiperVoice)) {
-            Write-Step "Piper отсутствует — устанавливаю ресурсы"
+        $PiperVoiceConfig = "$PiperVoice.json"
+        if (-not (Test-Path $PiperExe) -or -not (Test-Path $PiperVoice) -or -not (Test-Path $PiperVoiceConfig)) {
+            Write-Step "Piper отсутствует — устанавливаю CLI и голос Denis"
             Invoke-SetupScript (Join-Path $Root "tools\tts-lab\Install-TtsLab.ps1") @("-Engine", "piper")
+        }
+        if (-not (Test-Path $PiperExe) -or -not (Test-Path $PiperVoice) -or -not (Test-Path $PiperVoiceConfig)) {
+            throw "Установка Piper завершилась, но не найдены piper.exe, Denis ONNX или его JSON-конфигурация."
         }
     }
     elseif ($TtsEngine -eq "sapi") {

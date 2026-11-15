@@ -38,10 +38,10 @@ function Add-Case {
 function Invoke-PiperVoice {
     param([string]$Voice)
     $Exe = Join-Path $Root "assets\piper\piper.exe"
-    $Model = Join-Path $LabRoot "models\piper\ru_RU-$Voice-medium.onnx"
+    $Model = Join-Path $Root "assets\voices\ru_RU-$Voice-medium.onnx"
     $Output = Join-Path $SessionDir "Piper_$Voice.wav"
     if (-not (Test-Path $Exe) -or -not (Test-Path $Model) -or -not (Test-Path "$Model.json")) {
-        $Failures.Add("Piper " + $Voice + ": файлы не найдены. Запусти Install-TtsLab.ps1 -Engine piper.")
+        $Failures.Add("Piper " + $Voice + ": файлы не найдены. Запусти Install-TtsLab.ps1 -Engine piper -AllPiperVoices.")
         return
     }
     try {
