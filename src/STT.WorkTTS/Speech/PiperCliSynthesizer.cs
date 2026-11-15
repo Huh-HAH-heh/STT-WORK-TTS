@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using STT.WorkTTS.Audio;
+using STT.WorkTTS;
 using STT.WorkTTS.Configuration;
 
 namespace STT.WorkTTS.Speech;
@@ -55,22 +56,32 @@ public sealed class PiperCliSynthesizer : ISpeechSynthesizer
             startInfo.ArgumentList.Add(outputPath);
 
             using var process = new Process { StartInfo = startInfo };
-            if (!process.Start())
-                throw new InvalidOperationException("Не удалось запустить Piper.");
+            using (PerformanceLog.Measure("tts.piper.process_start"))
+            {
+                if (!process.Start())
+                    throw new InvalidOperationException("Не удалось запустить Piper.");
+            }
 
             var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
-            await process.StandardInput.WriteLineAsync(text.AsMemory(), cancellationToken);
-            process.StandardInput.Close();
-            await process.WaitForExitAsync(cancellationToken);
+            string error;
+            using (PerformanceLog.Measure("tts.piper.synthesis"))
+            {
+                await process.StandardInput.WriteLineAsync(text.AsMemory(), cancellationToken);
+                process.StandardInput.Close();
+                await process.WaitForExitAsync(cancellationToken);
+                error = await errorTask;
+            }
 
-            var error = await errorTask;
             if (process.ExitCode != 0)
                 throw new InvalidOperationException($"Piper завершился с кодом {process.ExitCode}: {error.Trim()}");
             if (!File.Exists(outputPath))
                 throw new InvalidOperationException("Piper завершился, но не создал WAV-файл.");
 
             if (_settings.PlayAudio)
-                await AudioPlayer.PlayWavAsync(outputPath, cancellationToken);
+            {
+                using (PerformanceLog.Measure("tts.piper.playback"))
+                    await AudioPlayer.PlayWavAsync(outputPath, cancellationToken);
+            }
         }
         finally
         {
