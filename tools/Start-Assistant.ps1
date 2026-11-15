@@ -38,6 +38,17 @@ function Test-HttpHealth([string]$Url) {
     }
 }
 
+function Test-PiperLegacyVoiceConfig([string]$ConfigPath) {
+    if (-not (Test-Path $ConfigPath)) { return $false }
+    try {
+        $ConfigText = [System.IO.File]::ReadAllText($ConfigPath, [System.Text.Encoding]::UTF8)
+        return (($ConfigText -match '"piper_version"\s*:\s*"1\.0\.0"') -and ($ConfigText -notmatch '"vowel_clusters"\s*:'))
+    }
+    catch {
+        return $false
+    }
+}
+
 function Test-TcpPort([int]$Port) {
     $client = New-Object System.Net.Sockets.TcpClient
     try {
@@ -223,12 +234,14 @@ if (-not $SkipTts) {
         $PiperExe = Join-Path $Root "assets\piper\piper.exe"
         $PiperVoice = Join-Path $Root "assets\voices\ru_RU-denis-medium.onnx"
         $PiperVoiceConfig = "$PiperVoice.json"
-        if (-not (Test-Path $PiperExe) -or -not (Test-Path $PiperVoice) -or -not (Test-Path $PiperVoiceConfig)) {
-            Write-Step "Piper отсутствует — устанавливаю CLI и голос Denis"
+        $PiperVoiceCompatible = Test-PiperLegacyVoiceConfig $PiperVoiceConfig
+        if (-not (Test-Path $PiperExe) -or -not (Test-Path $PiperVoice) -or -not $PiperVoiceCompatible) {
+            Write-Step "Проверяю совместимость Piper и голоса Denis — требуется v1.0.0"
             Invoke-SetupScript (Join-Path $Root "tools\tts-lab\Install-TtsLab.ps1") @("-Engine", "piper")
         }
-        if (-not (Test-Path $PiperExe) -or -not (Test-Path $PiperVoice) -or -not (Test-Path $PiperVoiceConfig)) {
-            throw "Установка Piper завершилась, но не найдены piper.exe, Denis ONNX или его JSON-конфигурация."
+        $PiperVoiceCompatible = Test-PiperLegacyVoiceConfig $PiperVoiceConfig
+        if (-not (Test-Path $PiperExe) -or -not (Test-Path $PiperVoice) -or -not $PiperVoiceCompatible) {
+            throw "Piper не готов: необходимы piper.exe и согласованная модель Denis v1.0.0 с JSON-конфигурацией."
         }
     }
     elseif ($TtsEngine -eq "sapi") {

@@ -10,7 +10,7 @@ public static class CommandScriptParser
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex GammaRestorePattern = new(
-        @"^\s*(?:(?:верни|восстанови|сбрось|отключи|выключи)\s+(?:(?:исходн\w*|обычн\w*|стар\w*|прежн\w*|предыдущ\w*|ночн\w*)\s+)?(?:гамм\w*|яркост\w*)(?:\s+экрана)?|(?:верни|восстанови)\s+(?:старую|исходную|прежнюю|предыдущую)\s+яркость(?:\s+экрана)?)\s*[.!?]*$",
+        @"^\s*(?:(?:верни|восстанови|сбрось|отключи|выключи|убери|сними)\s+(?:(?:исходн\w*|обычн\w*|стар\w*|прежн\w*|предыдущ\w*|ночн\w*)\s+)?(?:гамм\w*|яркост\w*)(?:\s+экрана)?|(?:гамм\w*|яркост\w*)(?:\s+экрана)?\s+(?:верни|восстанови|сбрось|отключи|выключи|убери|сними)|(?:верни|восстанови)\s+(?:старую|исходную|прежнюю|предыдущую)\s+яркость(?:\s+экрана)?)\s*[.!?]*$",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
     private static readonly Regex GammaNightPattern = new(

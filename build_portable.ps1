@@ -38,29 +38,17 @@ try {
         Copy-Item (Join-Path $Extracted "*") $ModelDir -Recurse -Force
     }
 
-    if (-not (Test-Path (Join-Path $PiperDir "piper.exe"))) {
-        $PiperZip = Join-Path $TempDir "piper-windows.zip"
-        $PiperExtract = Join-Path $TempDir "piper"
-        Write-Host "Downloading native Piper for Windows x64..."
-        Invoke-WebRequest -Uri "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip" -OutFile $PiperZip
-        Expand-Archive -Path $PiperZip -DestinationPath $PiperExtract -Force
-        $PiperExe = Get-ChildItem -Path $PiperExtract -Filter "piper.exe" -Recurse | Select-Object -First 1
-        if (-not $PiperExe) { throw "piper.exe was not found in the Piper archive." }
-        Copy-Item (Join-Path $PiperExe.Directory.FullName "*") $PiperDir -Recurse -Force
-    }
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "tools\tts-lab\Install-TtsLab.ps1") -Engine piper
+    if ($LASTEXITCODE -ne 0) { throw "Piper CLI and compatible Denis v1.0.0 assets could not be installed." }
 
     $VoiceModel = Join-Path $VoiceDir "ru_RU-denis-medium.onnx"
     $VoiceConfig = "$VoiceModel.json"
-    $VoiceBase = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/ru/ru_RU/denis/medium"
-    if (-not (Test-Path $VoiceModel)) {
-        Write-Host "Downloading Russian Piper Denis voice..."
-        Invoke-WebRequest -Uri "$VoiceBase/ru_RU-denis-medium.onnx?download=true" -OutFile $VoiceModel
+    if (-not (Test-Path (Join-Path $PiperDir "piper.exe")) -or -not (Test-Path $VoiceModel) -or -not (Test-Path $VoiceConfig)) {
+        throw "Piper portable assets are missing after installation."
     }
-    if (-not (Test-Path $VoiceConfig)) {
-        Invoke-WebRequest -Uri "$VoiceBase/ru_RU-denis-medium.onnx.json?download=true" -OutFile $VoiceConfig
-    }
-    if ((Get-Item $VoiceModel).Length -lt 1000000) {
-        throw "Piper model download is incomplete."
+    $VoiceConfigText = [System.IO.File]::ReadAllText($VoiceConfig, [System.Text.Encoding]::UTF8)
+    if (($VoiceConfigText -notmatch '"piper_version"\s*:\s*"1\.0\.0"') -or ($VoiceConfigText -match '"vowel_clusters"\s*:')) {
+        throw "Portable build requires a Piper v1.0.0 voice config compatible with the bundled legacy CLI."
     }
 
     Write-Host "Publishing self-contained .NET application..."

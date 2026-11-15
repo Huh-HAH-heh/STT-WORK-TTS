@@ -59,62 +59,68 @@ function Install-PiperAssets {
         $ModelName = "ru_RU-$Voice-medium.onnx"
         $ModelPath = Join-Path $VoiceRoot $ModelName
         $ConfigPath = "$ModelPath.json"
-        # The v1.0.0 path is no longer available; current voice files are published on main.
-        $Base = "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/$Voice/medium"
-        if (-not (Test-Path $ModelPath) -or (Get-Item $ModelPath).Length -lt 10000000) {
-            if (Test-Path $ModelPath) { Remove-Item $ModelPath -Force }
-            Write-Host "Скачивание Piper: $Voice"
+        # This revision uses the single-codepoint phoneme map supported by
+        # the bundled legacy Piper 2023.11.14-2 runtime.
+        $Base = "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/ru/ru_RU/$Voice/medium"
+
+        $NeedsRefresh = $true
+        if ((Test-Path $ModelPath) -and ((Get-Item $ModelPath).Length -ge 10000000) -and (Test-Path $ConfigPath) -and ((Get-Item $ConfigPath).Length -ge 1000)) {
+            $ExistingConfig = [System.IO.File]::ReadAllText($ConfigPath, [System.Text.Encoding]::UTF8)
+            $NeedsRefresh = -not (($ExistingConfig -match '"piper_version"\s*:\s*"1\.0\.0"') -and ($ExistingConfig -notmatch '"vowel_clusters"\s*:'))
+        }
+
+        if ($NeedsRefresh) {
+            Write-Host "Скачивание совместимой пары Piper v1.0.0: $Voice"
             $TemporaryModel = "$ModelPath.download"
-            if (Test-Path $TemporaryModel) { Remove-Item $TemporaryModel -Force }
-            $ModelUri = "${Base}/${ModelName}?download=true"
+            $TemporaryConfig = "$ConfigPath.download"
+            Remove-Item $TemporaryModel, $TemporaryConfig -Force -ErrorAction SilentlyContinue
+
+            $ModelUri = "\${Base}/\${ModelName}?download=true"
+            $ConfigUri = "\${Base}/\${ModelName}.json?download=true"
             try {
                 Invoke-WebRequest -UseBasicParsing -Uri $ModelUri -OutFile $TemporaryModel
-            }
-            catch {
-                throw "Не удалось скачать Piper ONNX '$Voice' по адресу '$ModelUri': $($_.Exception.Message)"
-            }
-            if ((Get-Item $TemporaryModel).Length -lt 10000000) { throw "Модель Piper $Voice скачана не полностью." }
-            Move-Item $TemporaryModel $ModelPath -Force
-        }
-        if (-not (Test-Path $ConfigPath) -or (Get-Item $ConfigPath).Length -lt 1000) {
-            if (Test-Path $ConfigPath) { Remove-Item $ConfigPath -Force }
-            $TemporaryConfig = "$ConfigPath.download"
-            if (Test-Path $TemporaryConfig) { Remove-Item $TemporaryConfig -Force }
-            $ConfigUri = "${Base}/${ModelName}.json?download=true"
-            try {
                 Invoke-WebRequest -UseBasicParsing -Uri $ConfigUri -OutFile $TemporaryConfig
+
+                if ((Get-Item $TemporaryModel).Length -lt 10000000) {
+                    throw "Модель скачана не полностью."
+                }
+                if ((Get-Item $TemporaryConfig).Length -lt 1000) {
+                    throw "Конфигурация скачана не полностью."
+                }
+
+                $VoiceConfigText = [System.IO.File]::ReadAllText($TemporaryConfig, [System.Text.Encoding]::UTF8)
+                if (-not $VoiceConfigText.Trim().StartsWith("{") -or -not $VoiceConfigText.Trim().EndsWith("}")) {
+                    throw "Конфигурация не является JSON-объектом."
+                }
+                if ($VoiceConfigText -notmatch '"audio"\s*:\s*\{') {
+                    throw 'В конфигурации отсутствует секция "audio".'
+                }
+                if ($VoiceConfigText -notmatch '"phoneme_id_map"\s*:\s*\{') {
+                    throw 'В конфигурации отсутствует секция "phoneme_id_map".'
+                }
+                if ($VoiceConfigText -notmatch '"piper_version"\s*:\s*"1\.0\.0"') {
+                    throw "Конфигурация не относится к Piper v1.0.0."
+                }
+                if ($VoiceConfigText -match '"vowel_clusters"\s*:') {
+                    throw "Конфигурация использует vowel_clusters и несовместима со старым CLI."
+                }
+
+                Move-Item -Path $TemporaryModel -Destination $ModelPath -Force
+                Move-Item -Path $TemporaryConfig -Destination $ConfigPath -Force
             }
             catch {
-                throw "Не удалось скачать конфигурацию Piper '$Voice' по адресу '$ConfigUri': $($_.Exception.Message)"
+                $DownloadError = $_.Exception.Message
+                Remove-Item $TemporaryModel, $TemporaryConfig -Force -ErrorAction SilentlyContinue
+                throw "Не удалось установить совместимую модель Piper '$Voice' из v1.0.0: $DownloadError"
             }
-            if ((Get-Item $TemporaryConfig).Length -lt 1000) { throw "Конфигурация Piper $Voice скачана не полностью." }
-            Move-Item $TemporaryConfig $ConfigPath -Force
         }
+        else {
+            Write-Host "[OK] Piper $Voice v1.0.0 совместим с установленным CLI."
+        }
+
         if ((Get-Item $ModelPath).Length -lt 10000000) { throw "Модель Piper $Voice скачана не полностью." }
         if ((Get-Item $ConfigPath).Length -lt 1000) { throw "Конфигурация Piper $Voice скачана не полностью." }
-        # Windows PowerShell 5.1 ConvertFrom-Json stores object keys in a
-        # case-insensitive map. IPA keys such as "ɡ" and "ɢ" in Piper's
-        # phoneme_id_map can then be reported as duplicates. Read UTF-8
-        # explicitly and validate the required JSON sections without
-        # converting the phoneme map into a PowerShell hashtable.
-        try {
-            $VoiceConfigText = [System.IO.File]::ReadAllText($ConfigPath, [System.Text.Encoding]::UTF8)
-            if (-not $VoiceConfigText.Trim().StartsWith("{") -or -not $VoiceConfigText.Trim().EndsWith("}")) {
-                throw "Файл не похож на JSON-объект."
-            }
-            if ($VoiceConfigText -notmatch '"audio"\s*:\s*\{') {
-                throw 'Отсутствует секция "audio".'
-            }
-            if ($VoiceConfigText -notmatch '"phoneme_id_map"\s*:\s*\{') {
-                throw 'Отсутствует секция "phoneme_id_map".'
-            }
-        }
-        catch {
-            throw "Конфигурация Piper $Voice не прошла проверку UTF-8/структуры: $($_.Exception.Message)"
-        }
-        Write-Host "Готов голос: $ModelName" -ForegroundColor Green
-    }
-}
+    }}
 
 function Install-XVibe {
     $Source = Join-Path $LabRoot "vendor\xVibePocketTTS"

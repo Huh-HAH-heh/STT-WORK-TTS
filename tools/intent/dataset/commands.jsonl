@@ -105,6 +105,14 @@
 {"text":"Верни обычную гамму","label":"display.gamma_restore"}
 {"text":"Восстанови исходную гамму экрана","label":"display.gamma_restore"}
 {"text":"Отключи ночную гамму","label":"display.gamma_restore"}
+{"text":"Гамму выключи","label":"display.gamma_restore"}
+{"text":"Выключи гамму","label":"display.gamma_restore"}
+{"text":"Гамму отключи","label":"display.gamma_restore"}
+{"text":"Отключи гамму","label":"display.gamma_restore"}
+{"text":"Убери гамму","label":"display.gamma_restore"}
+{"text":"Сбрось гамму","label":"display.gamma_restore"}
+{"text":"Выключи игровую гамму","label":"display.gamma_restore"}
+{"text":"Верни обычную гамму экрана","label":"display.gamma_restore"}
 {"text":"Сбрось гамму к прежнему состоянию","label":"display.gamma_restore"}
 {"text":"Верни старую яркость экрана","label":"display.gamma_restore"}
 {"text":"Восстанови исходную яркость","label":"display.gamma_restore"}
