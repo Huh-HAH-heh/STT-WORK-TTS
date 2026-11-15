@@ -24,6 +24,9 @@ try {
 
     New-Item -ItemType Directory -Force -Path $ModelDir, $PiperDir, $VoiceDir, $TempDir | Out-Null
 
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "tools\intent\Install-RuBertIntentModel.ps1")
+    if ($LASTEXITCODE -ne 0) { throw "RuBERT-tiny2 ONNX model is missing or invalid. Train it first." }
+
     if (-not (Test-Path (Join-Path $ModelDir "conf\model.conf"))) {
         $ModelZip = Join-Path $TempDir "vosk-model.zip"
         $ExtractDir = Join-Path $TempDir "vosk"
@@ -86,6 +89,7 @@ try {
     $PortableToolFiles = @(
         "tools\Start-Assistant.ps1",
         "tools\Install-VoskModel.ps1",
+        "tools\intent\Install-RuBertIntentModel.ps1",
         "tools\intent\Install-QwenIntentModel.ps1",
         "tools\intent\Start-IntentModel.ps1",
         "tools\tts-lab\Install-TtsLab.ps1",

@@ -75,11 +75,24 @@ if ($TtsEngine -notin @("silero", "xvibe", "piper", "sapi")) {
     throw "Неизвестный TTS '$TtsEngine'. Доступны silero и xvibe."
 }
 
+$Profile = "default"
+$ProfileIndex = [Array]::IndexOf($AppArguments, "--profile")
+if ($ProfileIndex -ge 0) {
+    if (($ProfileIndex + 1) -ge $AppArguments.Count) {
+        throw "После --profile укажи default или laptop."
+    }
+    $Profile = $AppArguments[$ProfileIndex + 1].ToLowerInvariant()
+}
+if ($Profile -notin @("default", "laptop")) {
+    throw "Неизвестный профиль '$Profile'. Доступны: default, laptop."
+}
+$SettingsFile = if ($Profile -eq "laptop") { "appsettings.laptop.json" } else { "appsettings.json" }
+
 if ($UsePortable) {
-    $SettingsPath = Join-Path $Root "appsettings.json"
+    $SettingsPath = Join-Path $Root $SettingsFile
 }
 else {
-    $SettingsPath = Join-Path $Root "src\STT.WorkTTS\appsettings.json"
+    $SettingsPath = Join-Path $Root ("src\STT.WorkTTS\" + $SettingsFile)
 }
 
 if (-not (Test-Path $SettingsPath)) {
@@ -133,57 +146,25 @@ if (-not $IntentDemo) {
 }
 
 if ($Settings.Intent.Enabled) {
-    Write-Step "Проверяю компактную модель Qwen3-0.6B для команд"
-    Invoke-SetupScript (Join-Path $Root "tools\\intent\\Install-FastIntentModel.ps1")
-
-    $IntentEndpoint = [Uri]$Settings.Intent.Endpoint
-    $HealthUrl = "$($IntentEndpoint.Scheme)://$($IntentEndpoint.Authority)/health"
-    if (Test-HttpHealth $HealthUrl) {
-        Write-Host "[OK] Быстрая модель отвечает: $HealthUrl" -ForegroundColor Green
-    }
-    elseif (Test-TcpPort $IntentEndpoint.Port) {
-        Write-Step "Порт быстрой модели занят, жду её загрузки"
-        $ServerReady = $false
-        for ($Attempt = 0; $Attempt -lt 60; $Attempt++) {
-            Start-Sleep -Seconds 2
-            if (Test-HttpHealth $HealthUrl) {
-                $ServerReady = $true
-                break
-            }
-        }
-        if (-not $ServerReady) {
-            throw "Порт $($IntentEndpoint.Port) занят, но быстрая модель не стала готовой. Проверь data\\logs."
-        }
-        Write-Host "[OK] Быстрая модель готова: $HealthUrl" -ForegroundColor Green
-    }
-    else {
-        $ServerPath = Join-Path $env:USERPROFILE ".docker\\bin\\inference\\llama-server.exe"
-        $ServerCommand = Get-Command "llama-server.exe" -ErrorAction SilentlyContinue
-        if ($ServerCommand) { $ServerPath = $ServerCommand.Source }
-        if (-not (Test-Path $ServerPath)) {
-            throw "Не найден llama-server.exe. Ожидаемый путь: $ServerPath"
-        }
-
-        Write-Step "Запускаю быструю модель Qwen3-0.6B"
-        Invoke-SetupScript (Join-Path $Root "tools\\intent\\Start-FastIntentModel.ps1") @(
-            "-ServerPath", $ServerPath,
-            "-Port", $IntentEndpoint.Port.ToString(),
-            "-Background"
-        )
-    }
+    Write-Step "Проверяю компактный маршрутизатор RuBERT-tiny2 ONNX"
+    Invoke-SetupScript (Join-Path $Root "tools\intent\Install-RuBertIntentModel.ps1")
+    Write-Host "[OK] RuBERT-tiny2 ONNX INT8: CPU inference, без llama-server." -ForegroundColor Green
 }
 else {
-    Write-Host "[OK] Intent router выключен в appsettings.json"
+    Write-Host "[OK] Нейросетевой маршрутизатор выключен в appsettings." -ForegroundColor Yellow
 }
 
 if ($Settings.Generation.Enabled) {
     $GenerationModelPath = Join-Path $Root ([string]$Settings.Generation.ModelPath)
     if (Test-Path $GenerationModelPath) {
-        Write-Host "[OK] Веса Qwen 4B уже установлены; сервер запустится по требованию." -ForegroundColor Green
+        Write-Host "[OK] Qwen 4B установлена; сервер запустится по требованию." -ForegroundColor Green
     }
     else {
-        Write-Host "[INFO] Qwen 4B пока не скачивается. Загрузка начнётся только при первом сложном запросе или генерации текста." -ForegroundColor Cyan
+        Write-Host "[INFO] Qwen 4B не скачивается до первого сложного запроса или генерации текста." -ForegroundColor Cyan
     }
+}
+else {
+    Write-Host "[OK] Qwen 4B отключена в профиле '$Profile'." -ForegroundColor Green
 }
 
 if (-not $SkipTts) {

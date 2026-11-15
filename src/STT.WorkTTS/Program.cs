@@ -16,7 +16,17 @@ internal static class Program
         Console.OutputEncoding = System.Text.Encoding.UTF8;
         var appDirectory = AppContext.BaseDirectory;
         PerformanceLog.Initialize(appDirectory);
-        var settingsPath = Path.Combine(appDirectory, "appsettings.json");
+        var profileIndex = Array.IndexOf(args, "--profile");
+        var profile = profileIndex >= 0 && profileIndex + 1 < args.Length
+            ? args[profileIndex + 1].Trim().ToLowerInvariant()
+            : "default";
+        if (profile is not ("default" or "laptop"))
+        {
+            Console.Error.WriteLine("Неизвестный профиль. Доступны: default, laptop.");
+            return 1;
+        }
+        var settingsFile = profile == "laptop" ? "appsettings.laptop.json" : "appsettings.json";
+        var settingsPath = Path.Combine(appDirectory, settingsFile);
 
         if (!File.Exists(settingsPath))
         {
@@ -66,14 +76,16 @@ internal static class Program
             using var recognizer = LoadVoskRecognizer(settings.Stt, appDirectory);
             var localProcessor = new LocalCommandProcessor(settings.Work, appDirectory);
             using var timers = CreateTimerService();
-            using var fastInterpreter = new LlamaCppIntentInterpreter(settings.Intent);
+            using var fastInterpreter = settings.Intent.Enabled
+                ? new RuBertIntentInterpreter(settings.Intent, appDirectory)
+                : null;
             using var heavyInterpreter = new LlamaCppIntentInterpreter(settings.Generation.ToIntentSettings());
             using var textGenerator = new LlamaCppTextGenerator(settings.Generation, appDirectory);
             using var executor = new WindowsActionExecutor(timers);
             if (executor.GammaRecoveryNotice is not null)
                 Console.WriteLine($"[GAMMA] {executor.GammaRecoveryNotice}");
 
-            ICommandProcessor processor = settings.Intent.Enabled
+            ICommandProcessor processor = settings.Intent.Enabled && fastInterpreter is not null
                 ? new NeuralCommandProcessor(
                     fastInterpreter,
                     heavyInterpreter,
@@ -103,14 +115,14 @@ internal static class Program
                 ? "Синтез отключён: режим проверки микрофона и STT."
                 : $"Синтез: {settings.Tts.Engine} / {settings.Tts.Voice}.");
             Console.WriteLine(settings.Intent.Enabled
-                ? $"Быстрое понимание: {settings.Intent.ModelAlias} — {settings.Intent.Endpoint}."
+                ? "Быстрое понимание: RuBERT-tiny2 ONNX INT8 (CPU)."
                 : "Понимание команд: локальные правила.");
             Console.WriteLine(settings.Generation.Enabled
                 ? $"Qwen 4B для сложных запросов и текста: {settings.Generation.Endpoint} (запуск по требованию)."
                 : "Генерация Qwen 4B отключена.");
             if (sttDemo)
                 Console.WriteLine("Режим --stt-demo: ответ выводится в консоль, без озвучивания.");
-            Console.WriteLine("STT и LLM работают локально; облачные API не используются.");
+            Console.WriteLine("STT, классификация команд и Windows API работают локально; облачные API не используются.");
             Console.WriteLine($"Журнал производительности: {PerformanceLog.LogPath}");
             Console.WriteLine();
 
@@ -253,7 +265,13 @@ internal static class Program
     private static async Task<int> RunIntentDemo(AppSettings settings)
     {
         using var timers = CreateTimerService();
-        using var fastInterpreter = new LlamaCppIntentInterpreter(settings.Intent);
+        if (!settings.Intent.Enabled)
+        {
+            Console.WriteLine("Нейросетевой маршрутизатор отключён в текущем профиле.");
+            return 1;
+        }
+
+        using var fastInterpreter = new RuBertIntentInterpreter(settings.Intent, AppContext.BaseDirectory);
         using var heavyInterpreter = new LlamaCppIntentInterpreter(settings.Generation.ToIntentSettings());
         using var textGenerator = new LlamaCppTextGenerator(settings.Generation, AppContext.BaseDirectory);
         var local = new LocalCommandProcessor(settings.Work, AppContext.BaseDirectory);

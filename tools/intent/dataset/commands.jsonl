@@ -1,0 +1,176 @@
+{"text":"Который сейчас час?","label":"system.get_time"}
+{"text":"Скажи текущее время","label":"system.get_time"}
+{"text":"Сколько времени на компьютере","label":"system.get_time"}
+{"text":"Подскажи, который час","label":"system.get_time"}
+{"text":"Сколько сейчас времени в системе","label":"system.get_time"}
+{"text":"Назови время","label":"system.get_time"}
+{"text":"Скажи, сколько времени","label":"system.get_time"}
+{"text":"Узнай текущее время","label":"system.get_time"}
+{"text":"Какая сегодня дата?","label":"system.get_date"}
+{"text":"Скажи сегодняшнее число","label":"system.get_date"}
+{"text":"Назови сегодняшнюю дату","label":"system.get_date"}
+{"text":"Какое сегодня число","label":"system.get_date"}
+{"text":"Подскажи дату","label":"system.get_date"}
+{"text":"Узнай текущую дату","label":"system.get_date"}
+{"text":"Какое число и месяц сегодня","label":"system.get_date"}
+{"text":"Скажи число сегодняшнего дня","label":"system.get_date"}
+{"text":"Скажи дату и время","label":"system.get_datetime"}
+{"text":"Назови текущую дату и время","label":"system.get_datetime"}
+{"text":"Который час и какое сегодня число","label":"system.get_datetime"}
+{"text":"Подскажи сегодняшние дату и время","label":"system.get_datetime"}
+{"text":"Какие сейчас дата и время","label":"system.get_datetime"}
+{"text":"Выведи дату вместе со временем","label":"system.get_datetime"}
+{"text":"Скажи текущие дату и часы","label":"system.get_datetime"}
+{"text":"Узнай, какое сейчас число и время","label":"system.get_datetime"}
+{"text":"Поставь таймер на 30 секунд","label":"timer.start"}
+{"text":"Запусти таймер на 5 минут","label":"timer.start"}
+{"text":"Мне нужен таймер на 10 минут","label":"timer.start"}
+{"text":"Включи таймер на 1 час","label":"timer.start"}
+{"text":"Создай таймер через 45 секунд","label":"timer.start"}
+{"text":"Поставь таймер на 2 минуты","label":"timer.start"}
+{"text":"Запусти таймер на 15 минут","label":"timer.start"}
+{"text":"Поставь таймер на 90 секунд","label":"timer.start"}
+{"text":"Отмени таймер","label":"timer.cancel"}
+{"text":"Останови таймер","label":"timer.cancel"}
+{"text":"Сбрось текущий таймер","label":"timer.cancel"}
+{"text":"Отмени установленный таймер","label":"timer.cancel"}
+{"text":"Останови таймер","label":"timer.cancel"}
+{"text":"Останови отсчёт таймера","label":"timer.cancel"}
+{"text":"Останови обратный отсчёт","label":"timer.cancel"}
+{"text":"Отмени таймер, он больше не нужен","label":"timer.cancel"}
+{"text":"Открой блокнот","label":"app.open"}
+{"text":"Запусти калькулятор","label":"app.open"}
+{"text":"Открой проводник Windows","label":"app.open"}
+{"text":"Включи браузер","label":"app.open"}
+{"text":"Открой системные настройки","label":"app.open"}
+{"text":"Запусти блокнот для заметок","label":"app.open"}
+{"text":"Открой мне калькулятор","label":"app.open"}
+{"text":"Открой проводник","label":"app.open"}
+{"text":"Открой сайт example.com","label":"url.open"}
+{"text":"Перейди на github.com","label":"url.open"}
+{"text":"Открой https://wikipedia.org","label":"url.open"}
+{"text":"Зайди на сайт youtube.com","label":"url.open"}
+{"text":"Открой страницу https://example.org/docs","label":"url.open"}
+{"text":"Перейди на google.com","label":"url.open"}
+{"text":"Открой адрес https://github.com","label":"url.open"}
+{"text":"Зайди на wikipedia.org","label":"url.open"}
+{"text":"Покажи рабочий стол","label":"window.show_desktop"}
+{"text":"Сверни все окна и покажи стол","label":"window.show_desktop"}
+{"text":"Сверни окна","label":"window.show_desktop"}
+{"text":"Переключись на рабочий стол","label":"window.show_desktop"}
+{"text":"Покажи рабочий стол и спрячь окна","label":"window.show_desktop"}
+{"text":"Покажи стол и убери все окна","label":"window.show_desktop"}
+{"text":"Отобрази рабочий стол Windows","label":"window.show_desktop"}
+{"text":"Покажи мне рабочий стол","label":"window.show_desktop"}
+{"text":"Установи громкость на 50 процентов","label":"audio.set_volume"}
+{"text":"Поставь звук на 30 процентов","label":"audio.set_volume"}
+{"text":"Сделай громкость 75 процентов","label":"audio.set_volume"}
+{"text":"Выставь громкость на 100 процентов","label":"audio.set_volume"}
+{"text":"Установи звук на 20 процентов","label":"audio.set_volume"}
+{"text":"Сделай громкость 0 процентов","label":"audio.set_volume"}
+{"text":"Поставь уровень звука на 65 процентов","label":"audio.set_volume"}
+{"text":"Установи громкость 40","label":"audio.set_volume"}
+{"text":"Сделай погромче","label":"audio.adjust_volume"}
+{"text":"Увеличь громкость","label":"audio.adjust_volume"}
+{"text":"Прибавь звук на 15 процентов","label":"audio.adjust_volume"}
+{"text":"Сделай тише","label":"audio.adjust_volume"}
+{"text":"Убавь громкость на 20 процентов","label":"audio.adjust_volume"}
+{"text":"Уменьши звук","label":"audio.adjust_volume"}
+{"text":"Добавь громкости","label":"audio.adjust_volume"}
+{"text":"Снизь громкость на 5 процентов","label":"audio.adjust_volume"}
+{"text":"Выключи звук","label":"audio.mute"}
+{"text":"Включи беззвучный режим","label":"audio.mute"}
+{"text":"Отключи звук компьютера","label":"audio.mute"}
+{"text":"Замьюти звук","label":"audio.mute"}
+{"text":"Сделай компьютер без звука","label":"audio.mute"}
+{"text":"Заглуши звук","label":"audio.mute"}
+{"text":"Поставь звук на беззвучный режим","label":"audio.mute"}
+{"text":"Выключи звук","label":"audio.mute"}
+{"text":"Включи звук обратно","label":"audio.unmute"}
+{"text":"Восстанови звук","label":"audio.unmute"}
+{"text":"Сними беззвучный режим","label":"audio.unmute"}
+{"text":"Разблокируй звук","label":"audio.unmute"}
+{"text":"Включи звук","label":"audio.unmute"}
+{"text":"Верни звук","label":"audio.unmute"}
+{"text":"Отключи режим mute звука","label":"audio.unmute"}
+{"text":"Сделай звук слышимым","label":"audio.unmute"}
+{"text":"Включи ночную гамму","label":"display.gamma_night"}
+{"text":"Сделай гамму светлее в тёмных играх","label":"display.gamma_night"}
+{"text":"Сделай гамму светлее","label":"display.gamma_night"}
+{"text":"Подними яркость гаммы","label":"display.gamma_night"}
+{"text":"Включи игровую гамму","label":"display.gamma_night"}
+{"text":"Подними яркость экрана для игры","label":"display.gamma_night"}
+{"text":"Максимизируй яркость гаммы","label":"display.gamma_night"}
+{"text":"Примени ночную гамму экрана","label":"display.gamma_night"}
+{"text":"Верни обычную гамму","label":"display.gamma_restore"}
+{"text":"Восстанови исходную гамму экрана","label":"display.gamma_restore"}
+{"text":"Отключи ночную гамму","label":"display.gamma_restore"}
+{"text":"Сбрось гамму к прежнему состоянию","label":"display.gamma_restore"}
+{"text":"Верни старую яркость экрана","label":"display.gamma_restore"}
+{"text":"Восстанови исходную яркость","label":"display.gamma_restore"}
+{"text":"Убери игровую гамму","label":"display.gamma_restore"}
+{"text":"Верни стандартную гамму","label":"display.gamma_restore"}
+{"text":"Заблокируй компьютер","label":"system.lock"}
+{"text":"Заблокируй рабочую станцию","label":"system.lock"}
+{"text":"Включи блокировку компьютера","label":"system.lock"}
+{"text":"Заблокируй Windows","label":"system.lock"}
+{"text":"Переведи компьютер на экран блокировки","label":"system.lock"}
+{"text":"Заблокируй мой ПК","label":"system.lock"}
+{"text":"Заблокируй текущую сессию","label":"system.lock"}
+{"text":"Выполни блокировку системы","label":"system.lock"}
+{"text":"Покажи список процессов","label":"process.list"}
+{"text":"Выведи активные процессы","label":"process.list"}
+{"text":"Покажи запущенные процессы","label":"process.list"}
+{"text":"Какие процессы сейчас работают","label":"process.list"}
+{"text":"Список всех процессов Windows","label":"process.list"}
+{"text":"Посмотри процессы компьютера","label":"process.list"}
+{"text":"Покажи диспетчер процессов","label":"process.list"}
+{"text":"Выведи tasklist","label":"process.list"}
+{"text":"Закрой Discord","label":"process.close"}
+{"text":"Заверши процесс chrome","label":"process.close"}
+{"text":"Закрой приложение Telegram","label":"process.close"}
+{"text":"Останови Steam","label":"process.close"}
+{"text":"Закрой блокнот","label":"process.close"}
+{"text":"Заверши Firefox","label":"process.close"}
+{"text":"Закрой обс","label":"process.close"}
+{"text":"Останови приложение Visual Studio Code","label":"process.close"}
+{"text":"Перечисли доступные команды","label":"assistant.list_capabilities"}
+{"text":"Покажи список своих функций","label":"assistant.list_capabilities"}
+{"text":"Что ты умеешь делать","label":"assistant.list_capabilities"}
+{"text":"Расскажи какие команды доступны","label":"assistant.list_capabilities"}
+{"text":"Назови свои возможности","label":"assistant.list_capabilities"}
+{"text":"Дай список функций","label":"assistant.list_capabilities"}
+{"text":"Какие действия ты можешь выполнить","label":"assistant.list_capabilities"}
+{"text":"Покажи список команд","label":"assistant.list_capabilities"}
+{"text":"Привет","label":"assistant.greeting"}
+{"text":"Здравствуй","label":"assistant.greeting"}
+{"text":"Добрый вечер","label":"assistant.greeting"}
+{"text":"Привет, помощник","label":"assistant.greeting"}
+{"text":"Эй, привет","label":"assistant.greeting"}
+{"text":"Доброе утро","label":"assistant.greeting"}
+{"text":"Привет, здорово","label":"assistant.greeting"}
+{"text":"Привет, ты здесь","label":"assistant.greeting"}
+{"text":"Объясни, как работает диспетчер задач","label":"assistant.answer"}
+{"text":"Расскажи, почему компьютер медленно работает","label":"assistant.answer"}
+{"text":"Ответь, что такое оперативная память","label":"assistant.answer"}
+{"text":"Объясни разницу между процессом и потоком","label":"assistant.answer"}
+{"text":"Расскажи, зачем нужен Vosk","label":"assistant.answer"}
+{"text":"Как работает Windows API","label":"assistant.answer"}
+{"text":"Почему падает производительность","label":"assistant.answer"}
+{"text":"Ответь на мой вопрос про сеть","label":"assistant.answer"}
+{"text":"Напиши короткую заметку о компьютере","label":"assistant.generate_text"}
+{"text":"Составь письмо преподавателю","label":"assistant.generate_text"}
+{"text":"Подготовь текст объявления","label":"assistant.generate_text"}
+{"text":"Создай описание проекта","label":"assistant.generate_text"}
+{"text":"Напиши план выступления","label":"assistant.generate_text"}
+{"text":"Сгенерируй небольшой отчёт","label":"assistant.generate_text"}
+{"text":"Составь список задач на день","label":"assistant.generate_text"}
+{"text":"Подготовь краткую инструкцию","label":"assistant.generate_text"}
+{"text":"Сделай что-нибудь непонятное","label":"unknown"}
+{"text":"Абракадабра включи то самое","label":"unknown"}
+{"text":"Выполни неизвестную системную функцию","label":"unknown"}
+{"text":"Поменяй всё как-нибудь","label":"unknown"}
+{"text":"Сделай штуку с компьютером","label":"unknown"}
+{"text":"Запусти неизвестную программу","label":"unknown"}
+{"text":"Сделай то, что я вчера просил, но другое","label":"unknown"}
+{"text":"Найди что-нибудь и запусти","label":"unknown"}

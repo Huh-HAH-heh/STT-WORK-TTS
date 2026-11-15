@@ -2,13 +2,14 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
+using Microsoft.ML.OnnxRuntime;
 using STT.WorkTTS;
 
 namespace STT.WorkTTS.Processing;
 
 public sealed class NeuralCommandProcessor : ICommandProcessor
 {
-    private readonly LlamaCppIntentInterpreter _fastInterpreter;
+    private readonly RuBertIntentInterpreter _fastInterpreter;
     private readonly LlamaCppIntentInterpreter _heavyInterpreter;
     private readonly LlamaCppTextGenerator _textGenerator;
     private readonly WindowsActionExecutor _executor;
@@ -16,7 +17,7 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
     private readonly string _rootDirectory;
 
     public NeuralCommandProcessor(
-        LlamaCppIntentInterpreter fastInterpreter,
+        RuBertIntentInterpreter fastInterpreter,
         LlamaCppIntentInterpreter heavyInterpreter,
         LlamaCppTextGenerator textGenerator,
         WindowsActionExecutor executor,
@@ -55,7 +56,7 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
                 var fastModelFailed = false;
                 try
                 {
-                    using (PerformanceLog.Measure("llm.fast_intent.plan_request"))
+                    using (PerformanceLog.Measure("intent.rubert.plan_request"))
                         plan = await _fastInterpreter.InterpretAsync(text, cancellationToken);
                 }
                 catch (Exception ex) when (IsModelException(ex))
@@ -65,8 +66,19 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
                     plan = new IntentPlan();
                 }
 
-                if (fastModelFailed || RequiresHeavyFallback(plan))
+                if (fastModelFailed)
+                {
+                    if (_textGenerator.Enabled)
+                        plan = await InterpretWithHeavyModelAsync(text, cancellationToken);
+                    else
+                        return new CommandResult(
+                            "Локальная модель понимания команд не смогла обработать фразу. Повтори её короче.",
+                            "RuBERT inference failed");
+                }
+                else if (_textGenerator.Enabled && RequiresHeavyFallback(plan))
+                {
                     plan = await InterpretWithHeavyModelAsync(text, cancellationToken);
+                }
             }
             catch (Exception ex) when (IsModelException(ex))
             {
@@ -170,6 +182,9 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
     {
         try
         {
+            if (!_textGenerator.Enabled)
+                return new CommandResult("Генерация свободных ответов отключена в профиле этого компьютера.");
+
             using (PerformanceLog.Measure("llm.qwen.answer"))
             {
                 var prompt = string.IsNullOrWhiteSpace(action.Arguments.TextPrompt)
@@ -192,6 +207,9 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
     {
         try
         {
+            if (!_textGenerator.Enabled)
+                return new CommandResult("Генерация документов отключена в профиле этого компьютера.");
+
             string generated;
             using (PerformanceLog.Measure("llm.qwen.document_generation"))
             {
@@ -237,7 +255,8 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
             or JsonException
             or InvalidOperationException
             or IOException
-            or Win32Exception;
+            or Win32Exception
+            or OnnxRuntimeException;
 
     private static string FindProjectRoot(string appDirectory)
     {

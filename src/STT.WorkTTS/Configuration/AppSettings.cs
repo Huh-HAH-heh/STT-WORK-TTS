@@ -30,6 +30,17 @@ public sealed class AppSettings
         if (Tts.StartupTimeoutSeconds is < 30 or > 3600)
             throw new InvalidDataException("Tts.StartupTimeoutSeconds должен быть от 30 до 3600 секунд.");
 
+        if (string.IsNullOrWhiteSpace(Intent.ModelPath)
+            || string.IsNullOrWhiteSpace(Intent.VocabularyPath)
+            || string.IsNullOrWhiteSpace(Intent.LabelsPath))
+            throw new InvalidDataException("Intent: ModelPath, VocabularyPath и LabelsPath обязательны.");
+        if (Intent.MaxSequenceLength is < 16 or > 128)
+            throw new InvalidDataException("Intent.MaxSequenceLength должен быть от 16 до 128.");
+        if (Intent.IntraOpThreads is < 1 or > 4)
+            throw new InvalidDataException("Intent.IntraOpThreads должен быть от 1 до 4.");
+        if (Intent.ConfidenceThreshold is < 0.1f or > 0.99f)
+            throw new InvalidDataException("Intent.ConfidenceThreshold должен быть от 0.1 до 0.99.");
+
         if (Intent.TimeoutSeconds is < 5 or > 120)
             throw new InvalidDataException("Intent.TimeoutSeconds должен быть от 5 до 120.");
         if (!Uri.TryCreate(Intent.Endpoint, UriKind.Absolute, out var endpoint)
@@ -100,6 +111,13 @@ public sealed class TtsSettings
 public sealed class IntentSettings
 {
     public bool Enabled { get; set; } = true;
+    public string ModelPath { get; set; } = "assets/intent/rubert-tiny2-intent-int8.onnx";
+    public string VocabularyPath { get; set; } = "assets/intent/vocab.txt";
+    public string LabelsPath { get; set; } = "assets/intent/labels.json";
+    public int MaxSequenceLength { get; set; } = 64;
+    public int IntraOpThreads { get; set; } = 2;
+    public float ConfidenceThreshold { get; set; } = 0.58f;
+    // Legacy HTTP fields are retained for the optional LlamaCpp interpreter used by generation fallback.
     public string Endpoint { get; set; } = "http://127.0.0.1:8083/v1/chat/completions";
     public string ModelAlias { get; set; } = "stt-fast-intent";
     public int TimeoutSeconds { get; set; } = 20;

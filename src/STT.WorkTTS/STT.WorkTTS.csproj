@@ -12,8 +12,11 @@
   <ItemGroup>
     <PackageReference Include="NAudio" Version="2.2.1" />
     <PackageReference Include="Vosk" Version="0.3.38" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.30.0" />
+    <PackageReference Include="Microsoft.ML.Tokenizers" Version="3.0.0" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="appsettings.laptop.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
