@@ -92,14 +92,25 @@ function Install-PiperAssets {
         }
         if ((Get-Item $ModelPath).Length -lt 10000000) { throw "Модель Piper $Voice скачана не полностью." }
         if ((Get-Item $ConfigPath).Length -lt 1000) { throw "Конфигурация Piper $Voice скачана не полностью." }
+        # Windows PowerShell 5.1 ConvertFrom-Json stores object keys in a
+        # case-insensitive map. IPA keys such as "ɡ" and "ɢ" in Piper's
+        # phoneme_id_map can then be reported as duplicates. Read UTF-8
+        # explicitly and validate the required JSON sections without
+        # converting the phoneme map into a PowerShell hashtable.
         try {
-            $VoiceConfig = Get-Content -Raw -Path $ConfigPath | ConvertFrom-Json
-            if (-not $VoiceConfig.audio -or -not $VoiceConfig.phoneme_id_map) {
-                throw "В конфигурации отсутствуют поля audio или phoneme_id_map."
+            $VoiceConfigText = [System.IO.File]::ReadAllText($ConfigPath, [System.Text.Encoding]::UTF8)
+            if (-not $VoiceConfigText.Trim().StartsWith("{") -or -not $VoiceConfigText.Trim().EndsWith("}")) {
+                throw "Файл не похож на JSON-объект."
+            }
+            if ($VoiceConfigText -notmatch '"audio"\s*:\s*\{') {
+                throw 'Отсутствует секция "audio".'
+            }
+            if ($VoiceConfigText -notmatch '"phoneme_id_map"\s*:\s*\{') {
+                throw 'Отсутствует секция "phoneme_id_map".'
             }
         }
         catch {
-            throw "Конфигурация Piper $Voice повреждена: $($_.Exception.Message)"
+            throw "Конфигурация Piper $Voice не прошла проверку UTF-8/структуры: $($_.Exception.Message)"
         }
         Write-Host "Готов голос: $ModelName" -ForegroundColor Green
     }
