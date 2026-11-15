@@ -307,6 +307,4 @@ public static class IntentPlanValidator
         "settings" => text.Contains("настройк"),
         _ => false
     };
-
-    public void Dispose() => _session.Dispose();
 }
