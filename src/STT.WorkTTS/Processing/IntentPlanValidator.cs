@@ -185,17 +185,17 @@ public static class IntentPlanValidator
 
         var grounded = command.Action switch
         {
-            "system.get_time" => HasAny("врем", "который час", "сколько времени"),
-            "system.get_date" => HasAny("дат", "число", "какое сегодня"),
+            "system.get_time" => HasAny("врем", "который час", "сколько времени", "часах", "на часах"),
+            "system.get_date" => HasAny("дат", "число", "какое сегодня", "какая сегодня"),
             "system.get_datetime" => HasAny("дат", "врем", "который час"),
-            "timer.start" => text.Contains("таймер"),
-            "timer.cancel" => text.Contains("таймер") && HasAny("отмен", "останов", "сброс"),
-            "app.open" => HasAny("открой", "открыть", "запусти", "запустить", "включи", "покажи", "вызови", "дай")
+            "timer.start" => HasAny("таймер", "отсч", "отсчет", "отсчёт"),
+            "timer.cancel" => HasAny("таймер", "отсч", "отсчет", "отсчёт") && HasAny("отмен", "останов", "сброс"),
+            "app.open" => HasAny("открой", "открыть", "запусти", "запустить", "включи", "вруби", "вруб", "покажи", "вызови", "дай")
                 && AppIsMentioned(text, command.Arguments.AppId!),
             "url.open" => HasAny("открой", "открыть", "перейди", "зайди", "сайт", "ссылк", "точка", ".com", ".ru", "www."),
             "window.show_desktop" => HasAny("рабочий стол", "сверни окна", "свернуть окна", "покажи стол", "убери окна"),
             "audio.set_volume" or "audio.adjust_volume" or "audio.mute" or "audio.unmute" =>
-                HasAny("громк", "тише", "громче", "звук", "беззвуч", "прибав", "убав", "уменьш", "сниз"),
+                HasAny("громк", "тише", "громче", "звук", "беззвуч", "прибав", "убав", "уменьш", "сниз", "повыс", "выруб", "заглуш"),
             "display.gamma_night" =>
                 HasAny("гамм", "яркост")
                 && HasAny("ночн", "игр", "темн", "светлее", "включ", "актив", "примен", "подним", "увелич", "повыс", "вруб", "освет", "светл", "поярч", "ярче", "максим"),
@@ -204,7 +204,7 @@ public static class IntentPlanValidator
                 && HasAny("верни", "восстанов", "сброс", "отключ", "выключ", "выруб", "убер", "сним", "обычн", "норм", "исходн", "стандарт", "откат", "стар", "прежн"),
             "system.lock" => HasAny("заблок", "блокиров"),
             "process.list" => HasAny("процесс", "tasklist", "приложен", "работа", "запущ"),
-            "process.close" => HasAny("закрой", "закрыть", "заверши", "завершить", "останови", "остановить", "убей")
+            "process.close" => HasAny("закрой", "закрыть", "заверши", "завершить", "останови", "остановить", "выключи", "выключ", "выруби", "выруб", "убей")
                 && (command.Arguments.ProcessIndex is int index
                     ? ProcessIndexIsMentioned(text, index)
                     : ProcessIsMentioned(text, command.Arguments.ProcessName)),
