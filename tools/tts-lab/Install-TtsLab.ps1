@@ -61,7 +61,8 @@ function Install-PiperAssets {
         $ConfigPath = "$ModelPath.json"
         # The v1.0.0 path is no longer available; current voice files are published on main.
         $Base = "https://huggingface.co/rhasspy/piper-voices/resolve/main/ru/ru_RU/$Voice/medium"
-        if (-not (Test-Path $ModelPath)) {
+        if (-not (Test-Path $ModelPath) -or (Get-Item $ModelPath).Length -lt 10000000) {
+            if (Test-Path $ModelPath) { Remove-Item $ModelPath -Force }
             Write-Host "Скачивание Piper: $Voice"
             $TemporaryModel = "$ModelPath.download"
             if (Test-Path $TemporaryModel) { Remove-Item $TemporaryModel -Force }
@@ -69,7 +70,8 @@ function Install-PiperAssets {
             if ((Get-Item $TemporaryModel).Length -lt 10000000) { throw "Модель Piper $Voice скачана не полностью." }
             Move-Item $TemporaryModel $ModelPath -Force
         }
-        if (-not (Test-Path $ConfigPath)) {
+        if (-not (Test-Path $ConfigPath) -or (Get-Item $ConfigPath).Length -lt 1000) {
+            if (Test-Path $ConfigPath) { Remove-Item $ConfigPath -Force }
             $TemporaryConfig = "$ConfigPath.download"
             if (Test-Path $TemporaryConfig) { Remove-Item $TemporaryConfig -Force }
             Invoke-WebRequest -UseBasicParsing -Uri "$Base/$ModelName.json?download=true" -OutFile $TemporaryConfig

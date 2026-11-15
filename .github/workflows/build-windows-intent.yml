@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/windows-voice-intents
+      - feature/rubert-tiny2-router
   workflow_dispatch:
 
 jobs:
