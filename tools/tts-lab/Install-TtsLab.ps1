@@ -75,8 +75,8 @@ function Install-PiperAssets {
             $TemporaryConfig = "$ConfigPath.download"
             Remove-Item $TemporaryModel, $TemporaryConfig -Force -ErrorAction SilentlyContinue
 
-            $ModelUri = $($Base)/$($ModelName)?download=true
-            $ConfigUri = $($Base)/$($ModelName).json?download=true
+            $ModelUri = "$($Base)/$($ModelName)?download=true"
+            $ConfigUri = "$($Base)/$($ModelName).json?download=true"
             try {
                 Invoke-WebRequest -UseBasicParsing -Uri $ModelUri -OutFile $TemporaryModel
                 Invoke-WebRequest -UseBasicParsing -Uri $ConfigUri -OutFile $TemporaryConfig
