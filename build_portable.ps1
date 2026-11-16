@@ -6,6 +6,23 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Push-Location $Root
 
 try {
+    function Invoke-DownloadFile([string]$Uri, [string]$Destination, [string]$Label) {
+        $Partial = "$Destination.download"
+        Remove-Item $Partial -Force -ErrorAction SilentlyContinue
+        Write-Host "Downloading $Label..."
+        & curl.exe --location --fail --show-error --retry 4 --retry-delay 5 --connect-timeout 30 --max-time 1200 --output $Partial $Uri
+        if ($LASTEXITCODE -ne 0) {
+            $Code = $LASTEXITCODE
+            Remove-Item $Partial -Force -ErrorAction SilentlyContinue
+            throw "Download failed for $Label (curl exit $Code)."
+        }
+        if (-not (Test-Path $Partial) -or (Get-Item $Partial).Length -lt 1024) {
+            Remove-Item $Partial -Force -ErrorAction SilentlyContinue
+            throw "Downloaded file for $Label is missing or incomplete."
+        }
+        Move-Item -Path $Partial -Destination $Destination -Force
+    }
+
     if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
         throw ".NET 10 SDK is required on the build computer."
     }
@@ -30,8 +47,7 @@ try {
     if (-not (Test-Path (Join-Path $ModelDir "conf\model.conf"))) {
         $ModelZip = Join-Path $TempDir "vosk-model.zip"
         $ExtractDir = Join-Path $TempDir "vosk"
-        Write-Host "Downloading Vosk Russian Small model..."
-        Invoke-WebRequest -Uri "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip" -OutFile $ModelZip
+        Invoke-DownloadFile "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip" $ModelZip "Vosk Russian Small model"
         Expand-Archive -Path $ModelZip -DestinationPath $ExtractDir -Force
         $Extracted = Join-Path $ExtractDir "vosk-model-small-ru-0.22"
         if (-not (Test-Path $Extracted)) { throw "Unexpected Vosk model archive structure." }
