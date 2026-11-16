@@ -28,9 +28,13 @@ Start.cmd
 
 ### Слабый ноутбук (4 ГБ RAM)
 
+В готовом переносном ZIP достаточно запустить:
+
 ```cmd
-Start.cmd --profile laptop
+Start.cmd
 ```
+
+Ноутбучные настройки Piper уже выставлены по умолчанию. Явный флаг `Start.cmd --profile laptop` также поддерживается.
 
 Профиль ноутбука:
 - Vosk Small RU для распознавания речи;
@@ -95,7 +99,7 @@ gh auth login
 gh release download laptop-v1.0.0 --repo Huh-HAH-heh/STT-WORK-TTS --pattern "STT-WORK-TTS-Windows-x64.zip" --dir C:\\STT-Laptop
 Expand-Archive C:\\STT-Laptop\\STT-WORK-TTS-Windows-x64.zip -DestinationPath C:\\STTWorkTTS
 cd C:\\STTWorkTTS
-.\\Start.cmd --profile laptop
+.\\Start.cmd
 ```
 
 На целевом ПК не нужны Python, .NET SDK, Ollama, llama-server или GPU. Приложение, Vosk и Piper уже находятся в архиве; первый запуск ноутбучного профиля не требует обучения, загрузки моделей или интернета.
