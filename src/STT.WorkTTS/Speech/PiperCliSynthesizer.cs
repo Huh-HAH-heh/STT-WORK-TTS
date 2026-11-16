@@ -62,14 +62,41 @@ public sealed class PiperCliSynthesizer : ISpeechSynthesizer
                     throw new InvalidOperationException("Не удалось запустить Piper.");
             }
 
-            var errorTask = process.StandardError.ReadToEndAsync(cancellationToken);
+            var errorTask = process.StandardError.ReadToEndAsync();
             string error;
-            using (PerformanceLog.Measure("tts.piper.synthesis"))
+            try
             {
-                await process.StandardInput.WriteLineAsync(text.AsMemory(), cancellationToken);
-                process.StandardInput.Close();
-                await process.WaitForExitAsync(cancellationToken);
-                error = await errorTask;
+                using (PerformanceLog.Measure("tts.piper.synthesis"))
+                {
+                    await process.StandardInput.WriteLineAsync(text.AsMemory(), cancellationToken);
+                    process.StandardInput.Close();
+                    await process.WaitForExitAsync(cancellationToken);
+                    error = await errorTask;
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                try
+                {
+                    if (!process.HasExited)
+                        process.Kill(entireProcessTree: true);
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+                {
+                    // The child may have exited between the state check and Kill.
+                }
+
+                try
+                {
+                    await process.WaitForExitAsync(CancellationToken.None);
+                    await errorTask;
+                }
+                catch (Exception ex) when (ex is InvalidOperationException or IOException)
+                {
+                    // Cancellation must not be hidden by pipe cleanup.
+                }
+
+                throw;
             }
 
             if (process.ExitCode != 0)
