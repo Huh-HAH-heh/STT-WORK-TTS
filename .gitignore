@@ -29,7 +29,7 @@ data/cache/
 *.wav
 *.mp3
 *.flac
-STT-WORK-TTS-Windows-x64.zip
+STT-WORK-TTS-Windows-x64.zip*
 
 # Editors
 .vscode/
