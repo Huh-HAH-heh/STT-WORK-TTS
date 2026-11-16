@@ -111,6 +111,7 @@ public sealed class TtsSettings
 public sealed class IntentSettings
 {
     public bool Enabled { get; set; } = true;
+    public bool UseOnnx { get; set; } = true;
     public string ModelPath { get; set; } = "assets/intent/rubert-tiny2-intent-int8.onnx";
     public string VocabularyPath { get; set; } = "assets/intent/vocab.txt";
     public string LabelsPath { get; set; } = "assets/intent/labels.json";
