@@ -21,6 +21,17 @@ function Invoke-Checked {
     if ($LASTEXITCODE -ne 0) { throw "$Label завершился с кодом $LASTEXITCODE." }
 }
 
+function Download-Checked {
+    param([string]$Uri, [string]$Destination, [string]$Label)
+    Write-Host ""
+    Write-Host ("== " + $Label + " ==") -ForegroundColor Cyan
+    & curl.exe --location --fail --show-error --retry 4 --retry-delay 5 --connect-timeout 30 --max-time 1200 --output $Destination $Uri
+    if ($LASTEXITCODE -ne 0) { throw "$Label: curl.exe завершился с кодом $LASTEXITCODE." }
+    if (-not (Test-Path $Destination) -or (Get-Item $Destination).Length -lt 1024) {
+        throw "$Label: загруженный файл отсутствует или повреждён."
+    }
+}
+
 function New-PythonEnvironment {
     param([string]$Name)
     $Venv = Join-Path $EnvRoot $Name
@@ -41,7 +52,7 @@ function Install-PiperAssets {
         $Zip = Join-Path $TempRoot "piper-windows.zip"
         $Extract = Join-Path $TempRoot "unpacked"
         Write-Host "Скачивание Piper CLI для Windows x64..."
-        Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip" -OutFile $Zip
+        Download-Checked "https://github.com/rhasspy/piper/releases/download/2023.11.14-2/piper_windows_amd64.zip" $Zip "Загрузка Piper CLI"
         Expand-Archive -Path $Zip -DestinationPath $Extract -Force
         $Exe = Get-ChildItem -Path $Extract -Filter "piper.exe" -Recurse | Select-Object -First 1
         if (-not $Exe) { throw "В архиве Piper не найден piper.exe." }
@@ -78,8 +89,8 @@ function Install-PiperAssets {
             $ModelUri = "$($Base)/$($ModelName)?download=true"
             $ConfigUri = "$($Base)/$($ModelName).json?download=true"
             try {
-                Invoke-WebRequest -UseBasicParsing -Uri $ModelUri -OutFile $TemporaryModel
-                Invoke-WebRequest -UseBasicParsing -Uri $ConfigUri -OutFile $TemporaryConfig
+                Download-Checked $ModelUri $TemporaryModel "Загрузка модели Piper $Voice"
+                Download-Checked $ConfigUri $TemporaryConfig "Загрузка конфигурации Piper $Voice"
 
                 if ((Get-Item $TemporaryModel).Length -lt 10000000) {
                     throw "Модель скачана не полностью."
