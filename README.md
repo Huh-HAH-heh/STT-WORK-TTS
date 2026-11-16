@@ -40,7 +40,7 @@ Start.cmd --profile laptop
 - llama-server не запускается;
 - ONNX Runtime работает на CPU с ограничением до двух потоков.
 
-Это не удалённый клиент: распознавание речи, классификация намерения, заполнение параметров, проверка и Windows API выполняются на самом ноутбуке.
+Это не урезанный удалённый клиент. Основной и ноутбучный профили используют один и тот же ActionCatalog, CommandScriptParser, IntentPlanValidator, RuBERT Intent Router и WindowsActionExecutor. Сохраняются системные, сетевые, Docker, мультимедийные, аудио, гамма, процессные, таймерные и CMD-действия; меняются только ресурсоёмкие реализации STT/intent/TTS.
 
 ## Подготовка модели (один раз на основном ПК)
 
@@ -62,30 +62,53 @@ RuBERT-tiny2 — предобученный русскоязычный энко�
 
 Размер ONNX и validation accuracy выводятся после обучения. Точный размер и точность зависят от версии библиотек и датасета. Каталог `commands.jsonl` используется сразу быстрым сопоставителем; новые фразы начинают работать без переобучения. Для улучшения RuBERT после накопления новых примеров отдельно запускай обучение.
 
-## Установка на ноутбук
+## Установка и публикация ноутбучной версии
 
-На основном ПК после обучения собери portable-архив:
+Рабочая ветка для ноутбука: `feature/lightweight-offline`. Она содержит полный набор действий основной версии и отдельный профиль `laptop`.
 
-```powershell
-.\build_portable.ps1
-```
+### На основном ПК
 
-Сборка проверит наличие RuBERT-файлов, включит модель в архив вместе с Vosk и Piper. Перенеси `STT-WORK-TTS-Windows-x64.zip` на ноутбук, распакуй и запусти:
-
-```cmd
-Start.cmd --profile laptop
-```
-
-Либо клонируй ветку и перенеси папку `assets/intent` с обученной модели:
+После обучения RuBERT и подготовки папки `assets/intent` собери автономный архив:
 
 ```powershell
-git clone -b feature/rubert-tiny2-router --single-branch https://github.com/Huh-HAH-heh/STT-WORK-TTS.git
-cd STT-WORK-TTS
-# Скопируй обученную папку assets\intent с основного ПК
-Start.cmd --profile laptop
+.\\build_portable.ps1 -Clean
 ```
 
-Первый запуск автоматически скачает компактную модель Vosk, если она отсутствует. Для профиля laptop не требуется Python, Ollama или llama-server; TTS использует Piper. Интернет нужен для первичной подготовки Vosk/зависимостей или переноса файлов.
+Для сборки нужны Windows x64 и .NET 10 SDK. В ZIP включаются self-contained приложение, Vosk Small RU, обученная RuBERT-tiny2 ONNX INT8, словарь и метки, Piper CLI и голос Denis, оба файла настроек, каталог команд и сценарий запуска. Рядом создаётся SHA-256 checksum.
+
+Сборка намеренно выполняется на основном ПК: каталог `assets/intent` содержит полученную при обучении модель и исключён из Git. На ноутбуке обучение и установка Python не нужны.
+
+После коммита и push изменений опубликуй ZIP в GitHub Releases:
+
+```powershell
+gh auth login
+.\\Publish-LaptopRelease.ps1 -Tag laptop-v1.0.0
+```
+
+Скрипт проверит ветку, чистоту рабочего дерева и SHA-256, отправит ветку и прикрепит ZIP с контрольной суммой к релизу. Для следующей сборки используй новый тег, например `laptop-v1.0.1`.
+
+### На ноутбуке
+
+Скачай опубликованный архив через GitHub CLI:
+
+```powershell
+gh release download laptop-v1.0.0 --repo Huh-HAH-heh/STT-WORK-TTS --pattern "STT-WORK-TTS-Windows-x64.zip" --dir C:\\STT-Laptop
+Expand-Archive C:\\STT-Laptop\\STT-WORK-TTS-Windows-x64.zip -DestinationPath C:\\STTWorkTTS
+cd C:\\STTWorkTTS
+.\\Start.cmd --profile laptop
+```
+
+На целевом ПК не нужны Python, .NET SDK, Ollama, llama-server или GPU. Приложение и модели уже находятся в архиве; при полной сборке с обученной RuBERT-моделью первый запуск работает без загрузки дополнительных компонентов и без интернета.
+
+### Прямая установка исходников
+
+Если нужно получить исходники, клонируй ноутбучную ветку:
+
+```powershell
+git clone -b feature/lightweight-offline --single-branch https://github.com/Huh-HAH-heh/STT-WORK-TTS.git
+```
+
+Но для запуска без среды разработки используй готовый ZIP из Releases.
 
 ## Проверка
 
