@@ -17,7 +17,8 @@ internal sealed class IntentExampleMatcher
     {
         "а", "и", "или", "в", "во", "на", "над", "под", "к", "ко", "с", "со",
         "по", "для", "из", "у", "мне", "меня", "мой", "моя", "мое", "мои",
-        "пожалуйста", "сейчас", "компьютер", "компьютера", "windows"
+        "пожалуйста", "сейчас", "компьютер", "компьютера", "windows",
+        "ну", "же", "бы", "ли", "то", "это", "вот"
     };
 
     private static readonly string[] RussianEndings =
@@ -68,7 +69,52 @@ internal sealed class IntentExampleMatcher
         }
     }
 
-    public bool TryResolve(string utterance, out string label, out float similarity)
+    public bool TryResolve(string utterance, out string label, out float similarity) =>
+        TryResolveCore(utterance, 0.58f, 0.12f, out label, out similarity);
+
+    public bool TryResolveFast(string utterance, out string label, out float similarity)
+    {
+        if (!TryResolveCore(utterance, 0.95f, 0.20f, out label, out similarity))
+            return false;
+
+        // Only execute fast matches that map to a real, registered command.
+        // Conversational labels still go through the regular intent pipeline.
+        return ActionCatalog.TryGet(label, out _);
+    }
+
+    public string GetSuggestions(string utterance)
+    {
+        var query = Tokenize(utterance);
+        if (query.Length == 0)
+            return "Назови действие и объект, например: «включи гамму» или «сделай громче».";
+
+        var suggestions = _examples
+            .GroupBy(example => example.Label, StringComparer.Ordinal)
+            .Where(group => ActionCatalog.TryGet(group.Key, out _))
+            .Select(group => new
+            {
+                Label = group.Key,
+                Score = group.Max(example => Similarity(query, example.Tokens))
+            })
+            .Where(item => item.Score >= 0.25f)
+            .OrderByDescending(item => item.Score)
+            .Take(3)
+            .Select(item => ActionCatalog.TryGet(item.Label, out var definition)
+                ? definition.Description
+                : item.Label)
+            .ToArray();
+
+        return suggestions.Length == 0
+            ? "В каталоге пока нет близкой команды. Назови приложение или объект и желаемое действие."
+            : $"Ближайшие команды: {string.Join("; ", suggestions)}. Какую выполнить?";
+    }
+
+    private bool TryResolveCore(
+        string utterance,
+        float minimumSimilarity,
+        float minimumMargin,
+        out string label,
+        out float similarity)
     {
         label = string.Empty;
         similarity = 0;
@@ -87,11 +133,11 @@ internal sealed class IntentExampleMatcher
             .OrderByDescending(item => item.Score)
             .ToArray();
 
-        if (ranked.Length == 0 || ranked[0].Score < 0.58f)
+        if (ranked.Length == 0 || ranked[0].Score < minimumSimilarity)
             return false;
 
         var runnerUp = ranked.Length > 1 ? ranked[1].Score : 0;
-        if (ranked[0].Score - runnerUp < 0.12f)
+        if (ranked[0].Score - runnerUp < minimumMargin)
             return false;
 
         label = ranked[0].Label;
