@@ -67,6 +67,12 @@ try {
     & dotnet @PublishArgs
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed." }
 
+    foreach ($SettingsFile in @("appsettings.json", "appsettings.laptop.json")) {
+        if (-not (Test-Path (Join-Path $PublishDir $SettingsFile))) {
+            throw "Published application is missing required profile settings: $SettingsFile"
+        }
+    }
+
     # Copy models and native Piper DLLs beside the executable.
     $PublishAssets = Join-Path $PublishDir "assets"
     New-Item -ItemType Directory -Force -Path $PublishAssets | Out-Null
@@ -105,9 +111,14 @@ try {
     Remove-Item $Archive -Force -ErrorAction SilentlyContinue
     Compress-Archive -Path (Join-Path $PublishDir "*") -DestinationPath $Archive -CompressionLevel Optimal
 
+    $ChecksumPath = "$Archive.sha256"
+    $Hash = (Get-FileHash -Path $Archive -Algorithm SHA256).Hash.ToLowerInvariant()
+    "$Hash  $(Split-Path -Leaf $Archive)" | Set-Content -Path $ChecksumPath -Encoding ascii
+
     $SizeMb = [math]::Round((Get-Item $Archive).Length / 1MB, 1)
     Write-Host ""
     Write-Host "Portable archive created: $Archive"
+    Write-Host "SHA-256 checksum created: $ChecksumPath"
     Write-Host "Archive size: $SizeMb MB"
     Write-Host "Extract the ZIP and run Start.cmd. Python is not required."
 }
