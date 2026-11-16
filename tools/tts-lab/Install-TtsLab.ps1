@@ -26,9 +26,9 @@ function Download-Checked {
     Write-Host ""
     Write-Host ("== " + $Label + " ==") -ForegroundColor Cyan
     & curl.exe --location --fail --show-error --retry 4 --retry-delay 5 --connect-timeout 30 --max-time 1200 --output $Destination $Uri
-    if ($LASTEXITCODE -ne 0) { throw "$Label: curl.exe завершился с кодом $LASTEXITCODE." }
+    if ($LASTEXITCODE -ne 0) { throw "${Label}: curl.exe завершился с кодом $LASTEXITCODE." }
     if (-not (Test-Path $Destination) -or (Get-Item $Destination).Length -lt 1024) {
-        throw "$Label: загруженный файл отсутствует или повреждён."
+        throw "${Label}: загруженный файл отсутствует или повреждён."
     }
 }
 
