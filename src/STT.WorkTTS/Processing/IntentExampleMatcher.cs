@@ -69,11 +69,25 @@ internal sealed class IntentExampleMatcher
         }
     }
 
-    public bool TryResolve(string utterance, out string label, out float similarity) =>
-        TryResolveCore(utterance, 0.58f, 0.12f, out label, out similarity);
+    public bool TryResolve(string utterance, out string label, out float similarity)
+    {
+        if (TryResolveExplicitNetworkIntent(utterance, out label))
+        {
+            similarity = 1f;
+            return true;
+        }
+
+        return TryResolveCore(utterance, 0.58f, 0.12f, out label, out similarity);
+    }
 
     public bool TryResolveFast(string utterance, out string label, out float similarity)
     {
+        if (TryResolveExplicitNetworkIntent(utterance, out label))
+        {
+            similarity = 1f;
+            return ActionCatalog.TryGet(label, out _);
+        }
+
         if (!TryResolveCore(utterance, 0.95f, 0.20f, out label, out similarity))
             return false;
 
@@ -82,31 +96,36 @@ internal sealed class IntentExampleMatcher
         return ActionCatalog.TryGet(label, out _);
     }
 
-    public string GetSuggestions(string utterance)
+    public string GetSuggestions(string utterance) =>
+        "Не удалось уверенно сопоставить фразу с доступной командой. Ничего не выполнено. " +
+        "Повтори запрос короче или произнеси «помощь» для списка возможностей.";
+
+    private static bool TryResolveExplicitNetworkIntent(string utterance, out string label)
     {
-        var query = Tokenize(utterance);
-        if (query.Length == 0)
-            return "Назови действие и объект, например: «включи гамму» или «сделай громче».";
+        var text = utterance.ToLowerInvariant().Replace('ё', 'е');
+        bool Has(params string[] terms) => terms.Any(text.Contains);
 
-        var suggestions = _examples
-            .GroupBy(example => example.Label, StringComparer.Ordinal)
-            .Where(group => ActionCatalog.TryGet(group.Key, out _))
-            .Select(group => new
-            {
-                Label = group.Key,
-                Score = group.Max(example => Similarity(query, example.Tokens))
-            })
-            .Where(item => item.Score >= 0.25f)
-            .OrderByDescending(item => item.Score)
-            .Take(3)
-            .Select(item => ActionCatalog.TryGet(item.Label, out var definition)
-                ? definition.Description
-                : item.Label)
-            .ToArray();
+        var hasPhoneContext = Has("телефон", "смартфон", "мобильн", "мобил", "докер", "docker", "контейнер");
+        var hasAddressContext = Has("адрес", "ip", "айпи", "я и пи", "сайт", "ссылк", "порт", "доступ");
 
-        return suggestions.Length == 0
-            ? "В каталоге пока нет близкой команды. Назови приложение или объект и желаемое действие."
-            : $"Ближайшие команды: {string.Join("; ", suggestions)}. Какую выполнить?";
+        if (hasPhoneContext && hasAddressContext)
+        {
+            label = "network.get_phone_access";
+            return true;
+        }
+
+        var hasInterface = Has("интерфейс");
+        var hasNetworkContext = Has("сет", "сеть", "ip", "айпи", "я и пи", "wi-fi", "wifi", "вайфай");
+        var hasAddress = Has("адрес", "подключ", "ip", "айпи", "я и пи", "wi-fi", "wifi", "вайфай");
+
+        if (hasInterface || hasNetworkContext && hasAddress)
+        {
+            label = "network.get_status";
+            return true;
+        }
+
+        label = string.Empty;
+        return false;
     }
 
     private bool TryResolveCore(
@@ -145,12 +164,20 @@ internal sealed class IntentExampleMatcher
         return true;
     }
 
-    private static string[] Tokenize(string text) =>
-        WordPattern.Matches(text.ToLowerInvariant().Replace('ё', 'е'))
+    private static string[] Tokenize(string text)
+    {
+        var normalized = Regex.Replace(
+            text.ToLowerInvariant().Replace('ё', 'е'),
+            @"(?<![а-яёa-z0-9])(?:я\s+и\s+пи|ай[\s-]*пи)(?![а-яёa-z0-9])",
+            "ip",
+            RegexOptions.CultureInvariant);
+
+        return WordPattern.Matches(normalized)
             .Select(match => Canonicalize(match.Value))
             .Where(token => token.Length >= 2 && !StopWords.Contains(token))
             .Distinct(StringComparer.Ordinal)
             .ToArray();
+    }
 
     private static string Canonicalize(string token)
     {

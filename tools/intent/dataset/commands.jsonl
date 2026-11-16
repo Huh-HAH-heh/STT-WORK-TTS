@@ -299,7 +299,7 @@
 {"text":"Покажи адрес компьютера для телефона","label":"network.get_phone_access"}
 {"text":"Какой локальный IP у моего ПК","label":"network.get_phone_access"}
 {"text":"Назови IP адрес этого компьютера в сети","label":"network.get_phone_access"}
-{"text":"Как мой компьютер виден в локальной сети","label":"network.get_phone_access"}
+{"text":"Как мой компьютер виден в локальной сети","label":"network.get_status"}
 {"text":"Скажи сетевое имя и адрес компьютера","label":"network.get_phone_access"}
 {"text":"Покажи адрес для смартфона","label":"network.get_phone_access"}
 {"text":"Как открыть мой сайт с телефона","label":"network.get_phone_access"}
@@ -313,7 +313,7 @@
 {"text":"Как зайти на локальный сайт с мобильника","label":"network.get_phone_access"}
 {"text":"Покажи LAN адрес компьютера","label":"network.get_phone_access"}
 {"text":"Дай локальный адрес ПК и ссылки контейнеров","label":"network.get_phone_access"}
-{"text":"Как к этому компьютеру подключиться по локальной сети","label":"network.get_phone_access"}
+{"text":"Как к этому компьютеру подключиться по локальной сети","label":"network.get_status"}
 {"text":"Найди адрес сайта который запущен в контейнере","label":"network.get_phone_access"}
 {"text":"Покажи адреса сайтов для локальной сети","label":"network.get_phone_access"}
 {"text":"Какой у ПК адрес айпи и как он в локальной сети виден","label":"network.get_phone_access"}
@@ -322,3 +322,13 @@
 {"text":"Я запустил сайт в Docker, дай адрес для телефона","label":"network.get_phone_access"}
 {"text":"Покажи адрес сайта который я развернул в докере для смартфона","label":"network.get_phone_access"}
 {"text":"Как зайти с телефона на сайт из Docker","label":"network.get_phone_access"}
+{"text":"Показать сетевые интерфейсы","label":"network.get_status"}
+{"text":"Показать сетевой интерфейс и IP адреса","label":"network.get_status"}
+{"text":"Показать сетевой интерфейс я и пи адреса","label":"network.get_status"}
+{"text":"Показать сетевые интерфейсы и IP адреса","label":"network.get_status"}
+{"text":"Показать сетевые интерфейсы и я и пи адреса","label":"network.get_status"}
+{"text":"Покажи интерфейсы сети и айпи адреса","label":"network.get_status"}
+{"text":"Покажи IP адреса сетевых интерфейсов","label":"network.get_status"}
+{"text":"Покажи сетевые интерфейсы и адреса","label":"network.get_status"}
+{"text":"Покажи адрес для телефона и Docker","label":"network.get_phone_access"}
+{"text":"Дай IP адрес Docker сайта для телефона","label":"network.get_phone_access"}
