@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Diagnostics;
 using System.Text;
@@ -213,25 +214,16 @@ internal static class Program
         var skipRequested = false;
         while (!speechTask.IsCompleted)
         {
-            try
+            // Poll the Windows key state instead of reading the console buffer:
+            // ordinary typed input remains untouched while speech is playing.
+            if ((GetAsyncKeyState(0x1B) & 0x8000) != 0)
             {
-                if (Console.KeyAvailable)
-                {
-                    var key = Console.ReadKey(intercept: true);
-                    if (key.Key == ConsoleKey.Escape)
-                    {
-                        skipRequested = true;
-                        skipSource.Cancel();
-                        break;
-                    }
-                }
-            }
-            catch (Exception ex) when (ex is InvalidOperationException or IOException)
-            {
+                skipRequested = true;
+                skipSource.Cancel();
                 break;
             }
 
-            await Task.Delay(30);
+            await Task.Delay(25);
         }
 
         try
@@ -244,6 +236,9 @@ internal static class Program
             Console.WriteLine("[TTS] Озвучка пропущена.");
         }
     }
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int virtualKey);
 
     private static VoskRecognizer LoadVoskRecognizer(SttSettings settings, string appDirectory)
     {
