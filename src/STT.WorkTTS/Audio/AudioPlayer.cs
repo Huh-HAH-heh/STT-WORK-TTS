@@ -11,10 +11,18 @@ public static class AudioPlayer
         output.Init(reader);
         output.Play();
 
-        while (output.PlaybackState == PlaybackState.Playing)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            await Task.Delay(40, cancellationToken);
+            while (output.PlaybackState == PlaybackState.Playing)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                await Task.Delay(30, cancellationToken);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            output.Stop();
+            throw;
         }
     }
 }
