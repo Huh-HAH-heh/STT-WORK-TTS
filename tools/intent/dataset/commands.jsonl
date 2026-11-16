@@ -316,3 +316,9 @@
 {"text":"Как к этому компьютеру подключиться по локальной сети","label":"network.get_phone_access"}
 {"text":"Найди адрес сайта который запущен в контейнере","label":"network.get_phone_access"}
 {"text":"Покажи адреса сайтов для локальной сети","label":"network.get_phone_access"}
+{"text":"Какой у ПК адрес айпи и как он в локальной сети виден","label":"network.get_phone_access"}
+{"text":"Какой адрес у компьютера в домашней сети","label":"network.get_phone_access"}
+{"text":"Покажи как мой компьютер виден другим устройствам в сети","label":"network.get_phone_access"}
+{"text":"Я запустил сайт в Docker, дай адрес для телефона","label":"network.get_phone_access"}
+{"text":"Покажи адрес сайта который я развернул в докере для смартфона","label":"network.get_phone_access"}
+{"text":"Как зайти с телефона на сайт из Docker","label":"network.get_phone_access"}
