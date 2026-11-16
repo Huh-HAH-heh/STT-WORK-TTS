@@ -8,6 +8,7 @@ public static class IntentPlanValidator
         "system.get_status", "system.get_battery", "network.get_status", "window.get_active",
         "timer.start", "timer.cancel",
         "app.open", "url.open", "window.show_desktop",
+        "media.play_pause", "media.next_track", "media.previous_track",
         "audio.set_volume", "audio.adjust_volume", "audio.mute", "audio.unmute",
         "display.gamma_night", "display.gamma_restore",
         "system.lock",
@@ -89,6 +90,9 @@ public static class IntentPlanValidator
             case "network.get_status":
             case "window.get_active":
             case "window.show_desktop":
+            case "media.play_pause":
+            case "media.next_track":
+            case "media.previous_track":
             case "audio.mute":
             case "audio.unmute":
             case "display.gamma_night":
@@ -203,6 +207,9 @@ public static class IntentPlanValidator
                 && AppIsMentioned(text, command.Arguments.AppId!),
             "url.open" => HasAny("открой", "открыть", "перейди", "зайди", "сайт", "ссылк", "точка", ".com", ".ru", "www."),
             "window.show_desktop" => HasAny("рабочий стол", "сверни окна", "свернуть окна", "покажи стол", "убери окна"),
+            "media.play_pause" => HasAny("пауза", "пауз", "продолж", "воспроизвед", "плеер", "музык"),
+            "media.next_track" => HasAny("следующ", "вперёд", "вперед", "переключи") && HasAny("трек", "песн", "композиц", "музык", "плеер"),
+            "media.previous_track" => HasAny("предыдущ", "прошл", "назад") && HasAny("трек", "песн", "композиц", "музык", "плеер"),
             "audio.set_volume" or "audio.adjust_volume" or "audio.mute" or "audio.unmute" =>
                 HasAny("громк", "тише", "громче", "звук", "беззвуч", "прибав", "убав", "уменьш", "сниз", "повыс", "выруб", "заглуш"),
             "display.gamma_night" =>

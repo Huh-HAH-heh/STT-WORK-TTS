@@ -300,6 +300,9 @@ public sealed class RuBertIntentInterpreter : IDisposable
             case "window.get_active":
             case "timer.cancel":
             case "window.show_desktop":
+            case "media.play_pause":
+            case "media.next_track":
+            case "media.previous_track":
             case "audio.mute":
             case "audio.unmute":
             case "display.gamma_night":

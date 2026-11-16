@@ -13,6 +13,9 @@ public sealed class WindowsActionExecutor : IDisposable
 {
     private const byte VkLeftWindows = 0x5B;
     private const byte VkD = 0x44;
+    private const byte VkMediaNextTrack = 0xB0;
+    private const byte VkMediaPreviousTrack = 0xB1;
+    private const byte VkMediaPlayPause = 0xB3;
     private const uint KeyUp = 0x0002;
 
     private readonly TimerService _timers;
@@ -202,6 +205,9 @@ public sealed class WindowsActionExecutor : IDisposable
                 "app.open" => OpenApplication(args.AppId),
                 "url.open" => OpenUrl(args.Url),
                 "window.show_desktop" => ShowDesktop(),
+                "media.play_pause" => SendMediaKey(VkMediaPlayPause, "Переключаю воспроизведение или паузу."),
+                "media.next_track" => SendMediaKey(VkMediaNextTrack, "Переключаю на следующий трек."),
+                "media.previous_track" => SendMediaKey(VkMediaPreviousTrack, "Возвращаю предыдущий трек."),
                 "audio.set_volume" => SetVolume(args.VolumePercent),
                 "audio.adjust_volume" => AdjustVolume(args.VolumeDelta),
                 "audio.mute" => SetMute(true),
@@ -297,6 +303,13 @@ public sealed class WindowsActionExecutor : IDisposable
         });
 
         return new CommandResult($"Открываю {uri.Host}.");
+    }
+
+    private static CommandResult SendMediaKey(byte virtualKey, string message)
+    {
+        KeybdEvent(virtualKey, 0, 0, UIntPtr.Zero);
+        KeybdEvent(virtualKey, 0, KeyUp, UIntPtr.Zero);
+        return new CommandResult(message);
     }
 
     private static CommandResult ShowDesktop()

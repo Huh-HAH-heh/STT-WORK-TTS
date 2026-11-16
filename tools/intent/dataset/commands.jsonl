@@ -283,3 +283,16 @@
 {"text":"Покажи окно на переднем плане","label":"window.get_active"}
 {"text":"Что сейчас в фокусе","label":"window.get_active"}
 {"text":"Какое приложение сейчас активно","label":"window.get_active"}
+{"text":"Поставь музыку на паузу","label":"media.play_pause"}
+{"text":"Продолжи воспроизведение","label":"media.play_pause"}
+{"text":"Поставь видео на паузу","label":"media.play_pause"}
+{"text":"Возобнови музыку","label":"media.play_pause"}
+{"text":"Включи или останови плеер","label":"media.play_pause"}
+{"text":"Следующий трек","label":"media.next_track"}
+{"text":"Переключи на следующую песню","label":"media.next_track"}
+{"text":"Включи следующую композицию","label":"media.next_track"}
+{"text":"Перемотай на следующий трек","label":"media.next_track"}
+{"text":"Предыдущий трек","label":"media.previous_track"}
+{"text":"Верни предыдущую песню","label":"media.previous_track"}
+{"text":"Включи прошлую композицию","label":"media.previous_track"}
+{"text":"Переключи на предыдущий трек","label":"media.previous_track"}
