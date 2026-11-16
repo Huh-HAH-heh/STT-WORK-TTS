@@ -78,6 +78,7 @@ try {
         "tools\Start-Assistant.ps1",
         "tools\Install-VoskModel.ps1",
         "tools\intent\Install-RuBertIntentModel.ps1",
+        "tools\intent\dataset\commands.jsonl",
         "tools\intent\Install-QwenIntentModel.ps1",
         "tools\intent\Start-IntentModel.ps1",
         "tools\tts-lab\Install-TtsLab.ps1",
