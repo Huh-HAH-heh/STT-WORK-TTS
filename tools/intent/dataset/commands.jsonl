@@ -232,3 +232,29 @@
 {"text":"Почему компьютер может зависать","label":"assistant.answer"}
 {"text":"Напиши небольшое описание программы","label":"assistant.generate_text"}
 {"text":"Составь сообщение для преподавателя","label":"assistant.generate_text"}
+{"text":"Гамму включи","label":"display.gamma_night"}
+{"text":"Включи гамму","label":"display.gamma_night"}
+{"text":"Вруби гамму","label":"display.gamma_night"}
+{"text":"Гамму вруби","label":"display.gamma_night"}
+{"text":"Активируй гамму","label":"display.gamma_night"}
+{"text":"Гамму активируй","label":"display.gamma_night"}
+{"text":"Подними гамму","label":"display.gamma_night"}
+{"text":"Сделай гамму ярче","label":"display.gamma_night"}
+{"text":"Осветли гамму","label":"display.gamma_night"}
+{"text":"Включи гамму для игры","label":"display.gamma_night"}
+{"text":"Подсвети игру гаммой","label":"display.gamma_night"}
+{"text":"Верни гамму","label":"display.gamma_restore"}
+{"text":"Восстанови гамму","label":"display.gamma_restore"}
+{"text":"Отключи игровую гамму","label":"display.gamma_restore"}
+{"text":"Сделай звук громче","label":"audio.adjust_volume"}
+{"text":"Прибавь громкости","label":"audio.adjust_volume"}
+{"text":"Звук прибавь","label":"audio.adjust_volume"}
+{"text":"Погромче звук","label":"audio.adjust_volume"}
+{"text":"Сделай звук тише","label":"audio.adjust_volume"}
+{"text":"Прибавь звук","label":"audio.adjust_volume"}
+{"text":"Убавь звук","label":"audio.adjust_volume"}
+{"text":"Уменьши громкость звука","label":"audio.adjust_volume"}
+{"text":"Заглуши компьютер","label":"audio.mute"}
+{"text":"Открой мне браузер","label":"app.open"}
+{"text":"Запусти браузер","label":"app.open"}
+{"text":"Закрой приложение","label":"process.close"}
