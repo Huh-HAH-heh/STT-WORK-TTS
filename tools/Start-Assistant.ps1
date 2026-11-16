@@ -157,13 +157,16 @@ if (-not $IntentDemo) {
     }
 }
 
-if ($Settings.Intent.Enabled) {
+if ($Settings.Intent.Enabled -and $Settings.Intent.UseOnnx) {
     Write-Step "Проверяю компактный маршрутизатор RuBERT-tiny2 ONNX"
     Invoke-SetupScript (Join-Path $Root "tools\intent\Install-RuBertIntentModel.ps1")
     Write-Host "[OK] RuBERT-tiny2 ONNX INT8: CPU inference, без llama-server." -ForegroundColor Green
 }
+elseif ($Settings.Intent.Enabled) {
+    Write-Host "[OK] Локальный маршрутизатор по каталогу команд: обучение и ONNX не требуются." -ForegroundColor Green
+}
 else {
-    Write-Host "[OK] Нейросетевой маршрутизатор выключен в appsettings." -ForegroundColor Yellow
+    Write-Host "[OK] Маршрутизатор команд отключён в appsettings." -ForegroundColor Yellow
 }
 
 if ($Settings.Generation.Enabled) {
