@@ -57,6 +57,24 @@ RUN.cmd автоматически запускает build_portable.ps1, есл
 
     powershell -ExecutionPolicy Bypass -File .\build_portable.ps1 -Clean
 
+После сборки рядом с ZIP создаётся файл \`STT-WORK-TTS-Windows-x64.zip.sha256\`. Он нужен для проверки целостности архива после переноса.
+
+### Постоянная опубликованная версия
+
+Для публикации ZIP в GitHub Releases используй тег ноутбучной версии. Выполняй команды из локальной копии ветки \`feature/lightweight-offline\`:
+
+    git switch feature/lightweight-offline
+    git pull
+    git tag laptop-v0.2.0
+    git push origin laptop-v0.2.0
+
+Push тега \`laptop-v*\` запускает ту же автономную сборку и прикрепляет ZIP вместе с SHA-256 к GitHub Release. При следующих версиях увеличивай номер тега, например \`laptop-v0.2.1\`.
+
+Скачать опубликованную сборку можно со страницы:
+https://github.com/Huh-HAH-heh/STT-WORK-TTS/releases
+
+Обычный push в ветку и ручной запуск workflow по-прежнему создают временный Actions-artifact на 90 дней. GitHub Release — постоянная версия, которую можно скачать и перенести на другой Windows x64 ПК без установки Python или моделей.
+
 ## Голос
 
 По умолчанию:
