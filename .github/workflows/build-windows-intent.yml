@@ -1,10 +1,9 @@
-name: Build and validate Windows intent engine
+name: Validate full-feature laptop edition
 
 on:
   push:
     branches:
-      - feature/windows-voice-intents
-      - feature/rubert-tiny2-router
+      - feature/lightweight-offline
   workflow_dispatch:
 
 jobs:
