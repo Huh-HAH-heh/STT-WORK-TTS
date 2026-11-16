@@ -24,8 +24,8 @@ try {
 
     New-Item -ItemType Directory -Force -Path $ModelDir, $PiperDir, $VoiceDir, $TempDir | Out-Null
 
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Root "tools\intent\Install-RuBertIntentModel.ps1")
-    if ($LASTEXITCODE -ne 0) { throw "RuBERT-tiny2 ONNX model is missing or invalid. Train it first." }
+    # The laptop profile uses the built-in command-example router.
+    # RuBERT/ONNX training is optional and is not required for this package.
 
     if (-not (Test-Path (Join-Path $ModelDir "conf\model.conf"))) {
         $ModelZip = Join-Path $TempDir "vosk-model.zip"
