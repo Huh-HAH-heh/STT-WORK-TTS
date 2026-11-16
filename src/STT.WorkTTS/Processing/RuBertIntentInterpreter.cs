@@ -14,9 +14,9 @@ namespace STT.WorkTTS.Processing;
 public sealed class RuBertIntentInterpreter : IDisposable
 {
     private const string LogitsOutput = "logits";
-    private readonly InferenceSession _session;
-    private readonly BertTokenizer _tokenizer;
-    private readonly string[] _labels;
+    private readonly InferenceSession? _session;
+    private readonly BertTokenizer? _tokenizer;
+    private readonly string[] _labels = [];
     private readonly int _sequenceLength;
     private readonly float _confidenceThreshold;
     private readonly long _padTokenId;
@@ -24,18 +24,6 @@ public sealed class RuBertIntentInterpreter : IDisposable
 
     public RuBertIntentInterpreter(IntentSettings settings, string appDirectory)
     {
-        var modelPath = AppPaths.Resolve(appDirectory, settings.ModelPath);
-        var vocabularyPath = AppPaths.Resolve(appDirectory, settings.VocabularyPath);
-        var labelsPath = AppPaths.Resolve(appDirectory, settings.LabelsPath);
-
-        foreach (var path in new[] { modelPath, vocabularyPath, labelsPath })
-        {
-            if (!File.Exists(path))
-                throw new FileNotFoundException(
-                    $"Не найден файл RuBERT Intent: {path}. Сначала обучи модель на основном ПК и перенеси assets/intent.",
-                    path);
-        }
-
         if (settings.MaxSequenceLength is < 16 or > 128)
             throw new InvalidDataException("Intent.MaxSequenceLength должен быть от 16 до 128.");
         if (settings.IntraOpThreads is < 1 or > 4)
@@ -45,6 +33,29 @@ public sealed class RuBertIntentInterpreter : IDisposable
 
         _sequenceLength = settings.MaxSequenceLength;
         _confidenceThreshold = settings.ConfidenceThreshold;
+
+        var datasetPath = AppPaths.Resolve(appDirectory, "tools/intent/dataset/commands.jsonl");
+        if (!File.Exists(datasetPath))
+            datasetPath = AppPaths.Resolve(appDirectory, "intent/commands.jsonl");
+
+        _exampleMatcher = new IntentExampleMatcher(datasetPath);
+        if (!settings.UseOnnx)
+        {
+            PerformanceLog.Event("intent.rules.ready", "examples-based;onnx=disabled");
+            return;
+        }
+
+        var modelPath = AppPaths.Resolve(appDirectory, settings.ModelPath);
+        var vocabularyPath = AppPaths.Resolve(appDirectory, settings.VocabularyPath);
+        var labelsPath = AppPaths.Resolve(appDirectory, settings.LabelsPath);
+        foreach (var path in new[] { modelPath, vocabularyPath, labelsPath })
+        {
+            if (!File.Exists(path))
+                throw new FileNotFoundException(
+                    $"Не найден файл RuBERT Intent: {path}. Обучи модель или отключи Intent.UseOnnx.",
+                    path);
+        }
+
         _labels = JsonSerializer.Deserialize<string[]>(File.ReadAllText(labelsPath))
             ?? throw new InvalidDataException("Не удалось прочитать labels.json.");
         if (_labels.Length == 0 || _labels.Distinct(StringComparer.Ordinal).Count() != _labels.Length)
@@ -59,7 +70,6 @@ public sealed class RuBertIntentInterpreter : IDisposable
             });
 
         _padTokenId = 0;
-
         var options = new SessionOptions
         {
             IntraOpNumThreads = settings.IntraOpThreads,
@@ -79,16 +89,9 @@ public sealed class RuBertIntentInterpreter : IDisposable
         }
         if (!_session.OutputMetadata.ContainsKey(LogitsOutput))
             throw new InvalidDataException("ONNX-модель не содержит выход logits.");
-
         if (_session.OutputMetadata[LogitsOutput].Dimensions.LastOrDefault() != _labels.Length)
             throw new InvalidDataException(
                 $"Число выходов модели не совпадает с labels.json: {_labels.Length}.");
-
-        var datasetPath = AppPaths.Resolve(appDirectory, "tools/intent/dataset/commands.jsonl");
-        if (!File.Exists(datasetPath))
-            datasetPath = AppPaths.Resolve(appDirectory, "intent/commands.jsonl");
-
-        _exampleMatcher = new IntentExampleMatcher(datasetPath);
     }
 
     public Task<IntentPlan> InterpretAsync(
@@ -120,6 +123,33 @@ public sealed class RuBertIntentInterpreter : IDisposable
                 catch (InvalidDataException ex)
                 {
                     PerformanceLog.Event("intent.catalog.fast_match_rejected", ex.Message);
+                }
+            }
+        }
+
+        if (_session is null || _tokenizer is null)
+        {
+            using (PerformanceLog.Measure("intent.rules.match"))
+            {
+                if (!_exampleMatcher.TryResolve(transcription, out var ruleLabel, out var ruleScore))
+                    return Task.FromResult(new IntentPlan());
+
+                var rulePlan = BuildPlan(transcription, ruleLabel);
+                if (rulePlan.Actions.Count == 0)
+                    return Task.FromResult(rulePlan);
+
+                try
+                {
+                    IntentPlanValidator.Validate(transcription, rulePlan);
+                    PerformanceLog.Event(
+                        "intent.rules.match",
+                        $"label={ruleLabel};similarity={ruleScore:F2}");
+                    return Task.FromResult(rulePlan);
+                }
+                catch (InvalidDataException ex)
+                {
+                    PerformanceLog.Event("intent.rules.rejected", ex.Message);
+                    return Task.FromResult(new IntentPlan());
                 }
             }
         }
@@ -516,5 +546,5 @@ public sealed class RuBertIntentInterpreter : IDisposable
         return false;
     }
 
-    public void Dispose() => _session.Dispose();
+    public void Dispose() => _session?.Dispose();
 }
