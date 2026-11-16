@@ -332,3 +332,5 @@
 {"text":"Покажи сетевые интерфейсы и адреса","label":"network.get_status"}
 {"text":"Покажи адрес для телефона и Docker","label":"network.get_phone_access"}
 {"text":"Дай IP адрес Docker сайта для телефона","label":"network.get_phone_access"}
+{"text":"Включи следующий трек","label":"media.next_track"}
+{"text":"Верни предыдущую песню","label":"media.previous_track"}
