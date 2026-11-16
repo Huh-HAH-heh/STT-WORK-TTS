@@ -79,7 +79,6 @@ internal static class Program
             using var fastInterpreter = settings.Intent.Enabled
                 ? new RuBertIntentInterpreter(settings.Intent, appDirectory)
                 : null;
-            using var heavyInterpreter = new LlamaCppIntentInterpreter(settings.Generation.ToIntentSettings());
             using var textGenerator = new LlamaCppTextGenerator(settings.Generation, appDirectory);
             using var executor = new WindowsActionExecutor(timers);
             if (executor.GammaRecoveryNotice is not null)
@@ -88,7 +87,6 @@ internal static class Program
             ICommandProcessor processor = settings.Intent.Enabled && fastInterpreter is not null
                 ? new NeuralCommandProcessor(
                     fastInterpreter,
-                    heavyInterpreter,
                     textGenerator,
                     executor,
                     localProcessor,
@@ -118,8 +116,8 @@ internal static class Program
                 ? "Быстрое понимание: RuBERT-tiny2 ONNX INT8 (CPU)."
                 : "Понимание команд: локальные правила.");
             Console.WriteLine(settings.Generation.Enabled
-                ? $"Qwen 4B для сложных запросов и текста: {settings.Generation.Endpoint} (запуск по требованию)."
-                : "Генерация Qwen 4B отключена.");
+                ? $"Qwen 4B доступна только для явно запрошенных ответов и текстов: {settings.Generation.Endpoint}."
+                : "Qwen 4B отключена: команды обрабатываются локальным маршрутизатором.");
             if (sttDemo)
                 Console.WriteLine("Режим --stt-demo: ответ выводится в консоль, без озвучивания.");
             Console.WriteLine("STT, классификация команд и Windows API работают локально; облачные API не используются.");
@@ -176,8 +174,11 @@ internal static class Program
                         Console.WriteLine("SAPI озвучивает напрямую через Windows; отдельный WAV не создаётся.");
                     }
 
+                    if (settings.Tts.PlayAudio && !string.IsNullOrWhiteSpace(result.Answer))
+                        Console.WriteLine("[Esc] Пропустить озвучку.");
+
                     using (PerformanceLog.Measure("tts.total", $"engine={settings.Tts.Engine};voice={settings.Tts.Voice}"))
-                        await synthesizer.SpeakAsync(result.Answer);
+                        await SpeakWithSkipAsync(synthesizer, result.Answer);
                 }
                 catch (Exception ex)
                 {
@@ -196,6 +197,52 @@ internal static class Program
 
         Console.WriteLine("Работа завершена.");
         return 0;
+    }
+
+    private static async Task SpeakWithSkipAsync(ISpeechSynthesizer synthesizer, string text)
+    {
+        using var skipSource = new CancellationTokenSource();
+        var speechTask = synthesizer.SpeakAsync(text, skipSource.Token);
+
+        if (Console.IsInputRedirected)
+        {
+            await speechTask;
+            return;
+        }
+
+        var skipRequested = false;
+        while (!speechTask.IsCompleted)
+        {
+            try
+            {
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(intercept: true);
+                    if (key.Key == ConsoleKey.Escape)
+                    {
+                        skipRequested = true;
+                        skipSource.Cancel();
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException)
+            {
+                break;
+            }
+
+            await Task.Delay(30);
+        }
+
+        try
+        {
+            await speechTask;
+        }
+        catch (OperationCanceledException) when (skipRequested)
+        {
+            PerformanceLog.Event("tts.playback.skipped");
+            Console.WriteLine("[TTS] Озвучка пропущена.");
+        }
     }
 
     private static VoskRecognizer LoadVoskRecognizer(SttSettings settings, string appDirectory)
@@ -272,13 +319,11 @@ internal static class Program
         }
 
         using var fastInterpreter = new RuBertIntentInterpreter(settings.Intent, AppContext.BaseDirectory);
-        using var heavyInterpreter = new LlamaCppIntentInterpreter(settings.Generation.ToIntentSettings());
         using var textGenerator = new LlamaCppTextGenerator(settings.Generation, AppContext.BaseDirectory);
         var local = new LocalCommandProcessor(settings.Work, AppContext.BaseDirectory);
         using var executor = new WindowsActionExecutor(timers);
         var processor = new NeuralCommandProcessor(
             fastInterpreter,
-            heavyInterpreter,
             textGenerator,
             executor,
             local,
