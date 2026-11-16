@@ -84,8 +84,11 @@ public sealed class RuBertIntentInterpreter : IDisposable
             throw new InvalidDataException(
                 $"Число выходов модели не совпадает с labels.json: {_labels.Length}.");
 
-        _exampleMatcher = new IntentExampleMatcher(
-            AppPaths.Resolve(appDirectory, "intent/commands.jsonl"));
+        var datasetPath = AppPaths.Resolve(appDirectory, "tools/intent/dataset/commands.jsonl");
+        if (!File.Exists(datasetPath))
+            datasetPath = AppPaths.Resolve(appDirectory, "intent/commands.jsonl");
+
+        _exampleMatcher = new IntentExampleMatcher(datasetPath);
     }
 
     public Task<IntentPlan> InterpretAsync(
@@ -98,6 +101,28 @@ public sealed class RuBertIntentInterpreter : IDisposable
             {
                 Clarification = "Не удалось разобрать фразу. Повтори команду."
             });
+
+        // Exact/high-confidence catalog phrases bypass ONNX entirely.
+        // This is the cheapest path for frequent voice commands.
+        if (_exampleMatcher.TryResolveFast(transcription, out var catalogLabel, out var catalogScore))
+        {
+            var catalogPlan = BuildPlan(transcription, catalogLabel);
+            if (catalogPlan.Actions.Count > 0)
+            {
+                try
+                {
+                    IntentPlanValidator.Validate(transcription, catalogPlan);
+                    PerformanceLog.Event(
+                        "intent.catalog.fast_match",
+                        $"label={catalogLabel};similarity={catalogScore:F2}");
+                    return Task.FromResult(catalogPlan);
+                }
+                catch (InvalidDataException ex)
+                {
+                    PerformanceLog.Event("intent.catalog.fast_match_rejected", ex.Message);
+                }
+            }
+        }
 
         using (PerformanceLog.Measure("intent.rubert.inference"))
         {
@@ -178,8 +203,7 @@ public sealed class RuBertIntentInterpreter : IDisposable
                     PerformanceLog.Event(
                         "intent.semantic_example.no_match",
                         $"classifier={predictedLabel};confidence={confidence:F3}");
-                    plan = Clarify(
-                        "Я не смогла определить действие по этой фразе. Повтори её другими словами, назвав объект и действие.");
+                    plan = Clarify(_exampleMatcher.GetSuggestions(transcription));
                 }
             }
             else
@@ -232,13 +256,13 @@ public sealed class RuBertIntentInterpreter : IDisposable
                             catch (InvalidDataException)
                             {
                                 plan = Clarify(
-                                    "Я распознала фразу, но не смогла надёжно подтвердить действие. Уточни, что именно нужно сделать.");
+                                    _exampleMatcher.GetSuggestions(transcription));
                             }
                         }
                         else
                         {
                             plan = Clarify(
-                                "Я не смогла подтвердить смысл команды. Повтори её другими словами, назвав объект и действие.");
+                                _exampleMatcher.GetSuggestions(transcription));
                         }
                     }
                 }
