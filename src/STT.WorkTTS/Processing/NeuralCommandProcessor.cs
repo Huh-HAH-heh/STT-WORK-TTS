@@ -62,6 +62,14 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
             }
         }
 
+        if (plan.Actions.Count == 0)
+        {
+            if (!string.IsNullOrWhiteSpace(plan.Clarification))
+                return new CommandResult(plan.Clarification);
+
+            return _localFallback.Process(text);
+        }
+
         var answers = new List<(int Position, string Text)>();
         var warnings = new List<string>();
         var generationTasks = new List<(int Position, Task<CommandResult> Task)>();
