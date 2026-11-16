@@ -89,6 +89,10 @@ try {
         }
     }
 
+    # This archive is a dedicated laptop distribution: plain Start.cmd must
+    # select Piper by default, even when the user does not pass --profile laptop.
+    Copy-Item (Join-Path $PublishDir "appsettings.laptop.json") (Join-Path $PublishDir "appsettings.json") -Force
+
     # Copy models and native Piper DLLs beside the executable.
     $PublishAssets = Join-Path $PublishDir "assets"
     New-Item -ItemType Directory -Force -Path $PublishAssets | Out-Null
