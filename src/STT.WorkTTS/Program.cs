@@ -114,8 +114,10 @@ internal static class Program
                 ? "Синтез отключён: режим проверки микрофона и STT."
                 : $"Синтез: {settings.Tts.Engine} / {settings.Tts.Voice}.");
             Console.WriteLine(settings.Intent.Enabled
-                ? "Быстрое понимание: RuBERT-tiny2 ONNX INT8 (CPU)."
-                : "Понимание команд: локальные правила.");
+                ? (settings.Intent.UseOnnx
+                    ? "Понимание команд: RuBERT-tiny2 ONNX INT8 (CPU)."
+                    : "Понимание команд: локальный каталог действий и примеров (без обучения).")
+                : "Понимание команд: базовые локальные сценарии.");
             Console.WriteLine(settings.Generation.Enabled
                 ? $"Qwen 4B доступна только для явно запрошенных ответов и текстов: {settings.Generation.Endpoint}."
                 : "Qwen 4B отключена: команды обрабатываются локальным маршрутизатором.");
