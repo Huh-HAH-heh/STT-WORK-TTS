@@ -1,6 +1,9 @@
 name: Build full-feature laptop package
 
 on:
+  push:
+    branches:
+      - feature/lightweight-offline
   workflow_dispatch:
 
 permissions:
@@ -9,6 +12,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
