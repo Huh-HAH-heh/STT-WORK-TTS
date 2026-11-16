@@ -1,10 +1,13 @@
-name: Validate full-feature laptop edition
+name: Build full-feature laptop package
 
 on:
   push:
     branches:
       - feature/lightweight-offline
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -17,8 +20,19 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - name: Build C# application
-        run: dotnet build .\src\STT.WorkTTS\STT.WorkTTS.csproj --configuration Release
+      - name: Build self-contained laptop ZIP
+        shell: powershell
+        run: .\build_portable.ps1 -Clean
+
+      - name: Upload portable ZIP and checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: STT-WORK-TTS-Laptop-x64
+          path: |
+            STT-WORK-TTS-Windows-x64.zip
+            STT-WORK-TTS-Windows-x64.zip.sha256
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Set up Python for adapter syntax validation
         uses: actions/setup-python@v5
