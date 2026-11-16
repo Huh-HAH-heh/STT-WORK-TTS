@@ -125,7 +125,7 @@ public sealed class IntentSettings
 
 public sealed class TextGenerationSettings
 {
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; } = false;
     public string Endpoint { get; set; } = "http://127.0.0.1:8082/v1/chat/completions";
     public string ModelAlias { get; set; } = "stt-intent";
     public int TimeoutSeconds { get; set; } = 240;
