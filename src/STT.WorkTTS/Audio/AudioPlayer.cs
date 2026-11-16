@@ -9,6 +9,7 @@ public static class AudioPlayer
         using var reader = new AudioFileReader(path);
         using var output = new WaveOutEvent();
         output.Init(reader);
+        cancellationToken.ThrowIfCancellationRequested();
         output.Play();
 
         try
