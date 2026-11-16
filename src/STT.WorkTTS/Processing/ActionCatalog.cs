@@ -33,6 +33,7 @@ public static class ActionCatalog
             ["system.get_status"] = new("system.get_status", "Показать характеристики и ресурсы компьютера", ActionBackend.Local, ActionRisk.ReadOnly),
             ["system.get_battery"] = new("system.get_battery", "Показать состояние батареи", ActionBackend.WinApi, ActionRisk.ReadOnly),
             ["network.get_status"] = new("network.get_status", "Показать сетевые интерфейсы и IP-адреса", ActionBackend.Local, ActionRisk.ReadOnly),
+            ["network.get_phone_access"] = new("network.get_phone_access", "Показать локальный адрес ПК и адреса опубликованных Docker-сайтов для телефона", ActionBackend.Local, ActionRisk.ReadOnly),
             ["window.get_active"] = new("window.get_active", "Определить активное окно и процесс", ActionBackend.Win32, ActionRisk.ReadOnly),
             ["timer.start"] = new("timer.start", "Запустить таймер", ActionBackend.Local, ActionRisk.Reversible),
             ["timer.cancel"] = new("timer.cancel", "Отменить таймер", ActionBackend.Local, ActionRisk.Reversible),

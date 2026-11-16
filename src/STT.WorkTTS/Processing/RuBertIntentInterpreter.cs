@@ -297,6 +297,7 @@ public sealed class RuBertIntentInterpreter : IDisposable
             case "system.get_status":
             case "system.get_battery":
             case "network.get_status":
+            case "network.get_phone_access":
             case "window.get_active":
             case "timer.cancel":
             case "window.show_desktop":

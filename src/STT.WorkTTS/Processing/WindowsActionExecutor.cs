@@ -5,6 +5,7 @@ using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using NAudio.CoreAudioApi;
 
 namespace STT.WorkTTS.Processing;
@@ -199,6 +200,7 @@ public sealed class WindowsActionExecutor : IDisposable
                 "system.get_status" => GetSystemStatus(),
                 "system.get_battery" => GetBatteryStatus(),
                 "network.get_status" => GetNetworkStatus(),
+                "network.get_phone_access" => GetPhoneAccess(),
                 "window.get_active" => GetActiveWindowStatus(),
                 "timer.start" => StartTimer(args.DurationSeconds, args.Label),
                 "timer.cancel" => CancelTimer(args.TimerId),
@@ -462,6 +464,299 @@ public sealed class WindowsActionExecutor : IDisposable
         {
             return new CommandResult("Не удалось получить сведения о сетевых интерфейсах.", ex.Message);
         }
+    }
+
+    private sealed record LanEndpoint(
+        string InterfaceName,
+        string InterfaceKind,
+        IPAddress Address,
+        IPAddress? SubnetMask,
+        IPAddress? Gateway,
+        bool IsDefaultRoute);
+
+    private static CommandResult GetPhoneAccess()
+    {
+        List<LanEndpoint> endpoints;
+        try
+        {
+            endpoints = GetLanEndpoints();
+        }
+        catch (NetworkInformationException ex)
+        {
+            return new CommandResult("Не удалось прочитать сетевые интерфейсы Windows.", ex.Message);
+        }
+
+        var preferred = endpoints.Where(item => item.IsDefaultRoute).ToArray();
+        if (preferred.Length == 0)
+        {
+            preferred = endpoints
+                .Where(item => item.InterfaceKind is "Wi-Fi" or "Ethernet")
+                .ToArray();
+        }
+
+        var addresses = preferred.Length > 0
+            ? preferred
+            : endpoints.ToArray();
+
+        var output = new StringBuilder();
+        output.AppendLine($"Имя компьютера в локальной сети: {Environment.MachineName}");
+        output.AppendLine("Это локальный адрес, доступный устройствам в той же сети, а не публичный IP из интернета.");
+
+        if (addresses.Length == 0)
+        {
+            output.AppendLine("Активный IPv4-адрес локальной сети не найден. Подключи ПК к Wi-Fi или Ethernet.");
+        }
+        else
+        {
+            output.AppendLine("Адреса, по которым телефон может обращаться к этому ПК:");
+            foreach (var endpoint in addresses)
+            {
+                output.Append($"  {endpoint.Address}");
+                if (endpoint.SubnetMask is not null)
+                    output.Append($"/{PrefixLength(endpoint.SubnetMask)}");
+                output.Append($" — {endpoint.InterfaceName} ({endpoint.InterfaceKind})");
+                if (endpoint.IsDefaultRoute && endpoint.Gateway is not null)
+                    output.Append($", шлюз {endpoint.Gateway}");
+                output.AppendLine();
+            }
+        }
+
+        output.AppendLine();
+        output.AppendLine("Docker — опубликованные веб-порты:");
+        output.AppendLine(GetDockerPhoneUrls(addresses.Select(item => item.Address).ToArray()));
+
+        output.AppendLine();
+        output.AppendLine("На телефоне подключись к той же Wi-Fi сети и открой один из показанных http(s)-адресов.");
+        output.AppendLine("Имя ПК может разрешаться не на каждом телефоне; для браузера надёжнее использовать IPv4-адрес.");
+        output.AppendLine("Если страница не открывается, проверь публикацию порта в Docker и разрешение входящих подключений в брандмауэре для частной сети.");
+        return new CommandResult(output.ToString().TrimEnd());
+    }
+
+    private static List<LanEndpoint> GetLanEndpoints()
+    {
+        var result = new List<LanEndpoint>();
+        foreach (var adapter in NetworkInterface.GetAllNetworkInterfaces())
+        {
+            if (adapter.OperationalStatus != OperationalStatus.Up
+                || adapter.NetworkInterfaceType is NetworkInterfaceType.Loopback or NetworkInterfaceType.Tunnel)
+                continue;
+
+            try
+            {
+                var properties = adapter.GetIPProperties();
+                var gateway = properties.GatewayAddresses
+                    .Select(item => item.Address)
+                    .FirstOrDefault(address =>
+                        address.AddressFamily == AddressFamily.InterNetwork
+                        && !address.Equals(IPAddress.Any));
+
+                var kind = adapter.NetworkInterfaceType switch
+                {
+                    NetworkInterfaceType.Wireless80211 => "Wi-Fi",
+                    NetworkInterfaceType.Ethernet
+                        or NetworkInterfaceType.FastEthernetFx
+                        or NetworkInterfaceType.FastEthernetT => "Ethernet",
+                    _ => adapter.NetworkInterfaceType.ToString()
+                };
+
+                foreach (var unicast in properties.UnicastAddresses)
+                {
+                    var address = unicast.Address;
+                    if (address.AddressFamily != AddressFamily.InterNetwork
+                        || IPAddress.IsLoopback(address)
+                        || address.Equals(IPAddress.Any))
+                        continue;
+
+                    var bytes = address.GetAddressBytes();
+                    if (bytes[0] == 169 && bytes[1] == 254)
+                        continue;
+
+                    result.Add(new LanEndpoint(
+                        adapter.Name,
+                        kind,
+                        address,
+                        unicast.IPv4Mask,
+                        gateway,
+                        gateway is not null));
+                }
+            }
+            catch (NetworkInformationException)
+            {
+                // A disconnected or virtual adapter can disappear while interfaces are enumerated.
+            }
+        }
+
+        return result
+            .OrderByDescending(item => item.IsDefaultRoute)
+            .ThenBy(item => item.InterfaceKind == "Wi-Fi" ? 0 : item.InterfaceKind == "Ethernet" ? 1 : 2)
+            .ToList();
+    }
+
+    private static string GetDockerPhoneUrls(IPAddress[] lanAddresses)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = "docker",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            }
+        };
+        process.StartInfo.ArgumentList.Add("ps");
+        process.StartInfo.ArgumentList.Add("--format");
+        process.StartInfo.ArgumentList.Add("{{.Names}}\t{{.Ports}}");
+
+        try
+        {
+            if (!process.Start())
+                return "Не удалось запустить Docker CLI.";
+        }
+        catch (Win32Exception ex)
+        {
+            return $"Docker CLI не найден или недоступен: {ex.Message}";
+        }
+
+        var stdoutTask = process.StandardOutput.ReadToEndAsync();
+        var stderrTask = process.StandardError.ReadToEndAsync();
+        if (!process.WaitForExit(4000))
+        {
+            try { process.Kill(entireProcessTree: true); }
+            catch (InvalidOperationException) { }
+            return "Docker не ответил за 4 секунды. Проверь, запущен ли Docker Desktop.";
+        }
+
+        var stdout = stdoutTask.GetAwaiter().GetResult();
+        var stderr = stderrTask.GetAwaiter().GetResult();
+        if (process.ExitCode != 0)
+            return $"Не удалось прочитать контейнеры Docker: {TrimDiagnostic(stderr)}";
+
+        var lines = stdout.Split(
+            new[] { "\r\n", "\n" },
+            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        if (lines.Length == 0)
+            return "Запущенных контейнеров нет.";
+
+        var webPorts = new HashSet<int>
+        {
+            80, 443, 3000, 3001, 4000, 4200, 5000, 5173, 5174,
+            8000, 8001, 8080, 8081, 8088, 8443, 8888, 9000, 9001, 9090
+        };
+        var portPattern = new Regex(
+            @"(?:(?<bind>\[[^\]]+\]|[0-9a-fA-F:.]+):)?(?<host>\d+)->(?<container>\d+)/tcp",
+            RegexOptions.CultureInvariant | RegexOptions.Compiled);
+
+        var links = new HashSet<string>(StringComparer.Ordinal);
+        var localhostOnly = new List<string>();
+        var otherMappings = new List<string>();
+        var anyPublishedPort = false;
+
+        foreach (var line in lines)
+        {
+            var columns = line.Split('\t', 2);
+            var containerName = columns[0];
+            var portText = columns.Length > 1 ? columns[1] : string.Empty;
+
+            foreach (Match match in portPattern.Matches(portText))
+            {
+                anyPublishedPort = true;
+                if (!int.TryParse(match.Groups["host"].Value, out var hostPort)
+                    || !int.TryParse(match.Groups["container"].Value, out var containerPort))
+                    continue;
+
+                var binding = match.Groups["bind"].Success
+                    ? match.Groups["bind"].Value.Trim('[', ']')
+                    : string.Empty;
+
+                if (binding is "127.0.0.1" or "::1" || binding.StartsWith("127.", StringComparison.Ordinal))
+                {
+                    localhostOnly.Add($"{containerName}: {binding}:{hostPort} → {containerPort}/tcp доступен только на самом ПК");
+                    continue;
+                }
+
+                var isWildcard = binding.Length == 0
+                    || binding is "0.0.0.0" or "::" or "*";
+                var matchingAddresses = isWildcard
+                    ? lanAddresses
+                    : lanAddresses.Where(address => address.ToString().Equals(binding, StringComparison.Ordinal)).ToArray();
+
+                if (matchingAddresses.Length == 0)
+                {
+                    otherMappings.Add($"{containerName}: {binding}:{hostPort} → {containerPort}/tcp");
+                    continue;
+                }
+
+                if (!webPorts.Contains(containerPort) && !webPorts.Contains(hostPort))
+                {
+                    otherMappings.Add($"{containerName}: порт {hostPort} → {containerPort}/tcp (не распознан как типовой веб-порт)");
+                    continue;
+                }
+
+                var scheme = containerPort is 443 or 8443 || hostPort is 443 or 8443
+                    ? "https"
+                    : "http";
+
+                foreach (var address in matchingAddresses)
+                {
+                    var url = $"{scheme}://{address}:{hostPort}";
+                    links.Add($"{url}  [{containerName}, порт контейнера {containerPort}]");
+                }
+            }
+        }
+
+        var result = new StringBuilder();
+        if (links.Count > 0)
+        {
+            foreach (var link in links.OrderBy(value => value, StringComparer.Ordinal))
+                result.AppendLine(link);
+        }
+        else
+        {
+            result.AppendLine(anyPublishedPort
+                ? "Опубликованных типовых веб-портов на LAN-интерфейсах не найдено."
+                : "У работающих контейнеров нет опубликованных TCP-портов.");
+        }
+
+        foreach (var item in localhostOnly.Distinct(StringComparer.Ordinal))
+            result.AppendLine($"ТОЛЬКО ЛОКАЛЬНО: {item}.");
+
+        foreach (var item in otherMappings.Distinct(StringComparer.Ordinal))
+            result.AppendLine($"Другой опубликованный порт: {item}.");
+
+        if (localhostOnly.Count > 0)
+        {
+            result.AppendLine("Чтобы телефон мог подключиться, в compose используй публикацию вида \"8080:80\" или \"0.0.0.0:8080:80\", а не \"127.0.0.1:8080:80\".");
+            result.AppendLine("Веб-приложение внутри контейнера должно слушать 0.0.0.0, а не только 127.0.0.1.");
+        }
+
+        if (links.Count == 0 && otherMappings.Count == 0 && localhostOnly.Count == 0)
+            result.Append("В compose добавь секцию ports, например: ports: [\"8080:80\"].");
+
+        return result.ToString().TrimEnd();
+    }
+
+    private static int PrefixLength(IPAddress mask)
+    {
+        var count = 0;
+        foreach (var value in mask.GetAddressBytes())
+        {
+            for (var bit = 7; bit >= 0; bit--)
+            {
+                if ((value & (1 << bit)) == 0)
+                    return count;
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static string TrimDiagnostic(string value)
+    {
+        var result = value.Trim();
+        return result.Length <= 240 ? result : result[..240];
     }
 
     private static CommandResult GetActiveWindowStatus()

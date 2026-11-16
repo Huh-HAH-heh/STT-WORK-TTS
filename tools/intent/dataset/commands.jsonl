@@ -296,3 +296,23 @@
 {"text":"Верни предыдущую песню","label":"media.previous_track"}
 {"text":"Включи прошлую композицию","label":"media.previous_track"}
 {"text":"Переключи на предыдущий трек","label":"media.previous_track"}
+{"text":"Покажи адрес компьютера для телефона","label":"network.get_phone_access"}
+{"text":"Какой локальный IP у моего ПК","label":"network.get_phone_access"}
+{"text":"Назови IP адрес этого компьютера в сети","label":"network.get_phone_access"}
+{"text":"Как мой компьютер виден в локальной сети","label":"network.get_phone_access"}
+{"text":"Скажи сетевое имя и адрес компьютера","label":"network.get_phone_access"}
+{"text":"Покажи адрес для смартфона","label":"network.get_phone_access"}
+{"text":"Как открыть мой сайт с телефона","label":"network.get_phone_access"}
+{"text":"Покажи ссылку на сайт в Docker для телефона","label":"network.get_phone_access"}
+{"text":"Найди адрес Docker контейнера для мобильного","label":"network.get_phone_access"}
+{"text":"Какие адреса моих контейнеров доступны по Wi Fi","label":"network.get_phone_access"}
+{"text":"Какой адрес вводить в браузере телефона","label":"network.get_phone_access"}
+{"text":"Покажи IP и порты Docker","label":"network.get_phone_access"}
+{"text":"Найди опубликованные веб порты Docker","label":"network.get_phone_access"}
+{"text":"Покажи ссылки на запущенные сайты","label":"network.get_phone_access"}
+{"text":"Как зайти на локальный сайт с мобильника","label":"network.get_phone_access"}
+{"text":"Покажи LAN адрес компьютера","label":"network.get_phone_access"}
+{"text":"Дай локальный адрес ПК и ссылки контейнеров","label":"network.get_phone_access"}
+{"text":"Как к этому компьютеру подключиться по локальной сети","label":"network.get_phone_access"}
+{"text":"Найди адрес сайта который запущен в контейнере","label":"network.get_phone_access"}
+{"text":"Покажи адреса сайтов для локальной сети","label":"network.get_phone_access"}
