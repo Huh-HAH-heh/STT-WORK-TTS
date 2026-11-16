@@ -30,7 +30,7 @@ jobs:
 
       - name: Build self-contained archive
         shell: powershell
-        run: .\\build_portable.ps1 -Clean
+        run: .\build_portable.ps1 -Clean
 
       - name: Upload portable ZIP
         uses: actions/upload-artifact@v4
