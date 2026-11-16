@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - feature/lightweight-offline
+    tags:
+      - "laptop-v*"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: offline-build-${{ github.ref }}
@@ -18,23 +20,37 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python 3.12 x64
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           architecture: "x64"
 
       - name: Build self-contained archive
         shell: powershell
-        run: .\build_portable.ps1 -Clean
+        run: .\\build_portable.ps1 -Clean
 
       - name: Upload portable ZIP
         uses: actions/upload-artifact@v4
         with:
           name: STT-WORK-TTS-Windows-x64
-          path: STT-WORK-TTS-Windows-x64.zip
+          path: |
+            STT-WORK-TTS-Windows-x64.zip
+            STT-WORK-TTS-Windows-x64.zip.sha256
           if-no-files-found: error
           compression-level: 0
           retention-days: 90
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/laptop-v')
+        uses: softprops/action-gh-release@v3
+        with:
+          name: STT Work TTS Laptop ${{ github.ref_name }}
+          generate_release_notes: true
+          make_latest: true
+          fail_on_unmatched_files: true
+          files: |
+            STT-WORK-TTS-Windows-x64.zip
+            STT-WORK-TTS-Windows-x64.zip.sha256
