@@ -108,8 +108,10 @@ internal sealed class IntentExampleMatcher
         var hasPhoneTarget = Has("для телефона", "с телефона", "на телефоне", "смартфон", "мобильн", "мобил");
         var hasDockerContext = Has("докер", "docker", "контейнер");
         var hasAddressContext = Has("адрес", "ip", "айпи", "я и пи", "сайт", "ссылк", "порт", "доступ");
+        var hasRequestCue = Has("показ", "покаж", "вывед", "назов", "какие", "какой", "сколько",
+            "проверь", "посмотр", "узнай", "скажи", "дай", "найди", "нужен", "хочу", "открой", "зайти", "подключ");
 
-        if ((hasPhoneTarget || hasDockerContext) && hasAddressContext)
+        if (hasRequestCue && (hasPhoneTarget || hasDockerContext) && hasAddressContext)
         {
             label = "network.get_phone_access";
             return true;
@@ -119,7 +121,7 @@ internal sealed class IntentExampleMatcher
         var hasNetworkContext = Has("сет", "сеть", "ip", "айпи", "я и пи", "wi-fi", "wifi", "вайфай");
         var hasAddress = Has("адрес", "подключ", "ip", "айпи", "я и пи", "wi-fi", "wifi", "вайфай");
 
-        if (hasNetworkContext && (hasInterface || hasAddress))
+        if (hasRequestCue && hasNetworkContext && (hasInterface || hasAddress))
         {
             label = "network.get_status";
             return true;
@@ -206,7 +208,7 @@ internal sealed class IntentExampleMatcher
             return "$open";
         if (StartsWithAny(token, "закро", "закры", "заверш", "останов", "убей"))
             return "$close";
-        if (StartsWithAny(token, "покаж", "вывед", "перечис", "назов"))
+        if (StartsWithAny(token, "показ", "покаж", "вывед", "перечис", "назов"))
             return "$list";
         if (StartsWithAny(token, "заблок", "блокиру"))
             return "$lock";
