@@ -103,7 +103,7 @@ internal sealed class IntentExampleMatcher
     private static bool TryResolveExplicitNetworkIntent(string utterance, out string label)
     {
         var text = utterance.ToLowerInvariant().Replace('ё', 'е');
-        bool Has(params string[] terms) => terms.Any(text.Contains);
+        bool Has(params string[] terms) => terms.Any(term => text.Contains(term, StringComparison.Ordinal));
 
         var hasPhoneTarget = Has("для телефона", "с телефона", "на телефоне", "смартфон", "мобильн", "мобил");
         var hasDockerContext = Has("докер", "docker", "контейнер");
