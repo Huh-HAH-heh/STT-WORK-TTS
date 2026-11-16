@@ -92,6 +92,10 @@ try {
     # This archive is a dedicated laptop distribution: plain Start.cmd must
     # select Piper by default, even when the user does not pass --profile laptop.
     Copy-Item (Join-Path $PublishDir "appsettings.laptop.json") (Join-Path $PublishDir "appsettings.json") -Force
+    $PortableSettings = Get-Content -Raw -Path (Join-Path $PublishDir "appsettings.json") | ConvertFrom-Json
+    if ($PortableSettings.Tts.Engine -ne "Piper" -or $PortableSettings.Generation.Enabled -or $PortableSettings.Intent.UseOnnx) {
+        throw "Portable default settings must use Piper with generation and ONNX disabled."
+    }
 
     # Copy models and native Piper DLLs beside the executable.
     $PublishAssets = Join-Path $PublishDir "assets"
