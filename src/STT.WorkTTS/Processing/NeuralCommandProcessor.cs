@@ -10,7 +10,6 @@ namespace STT.WorkTTS.Processing;
 public sealed class NeuralCommandProcessor : ICommandProcessor
 {
     private readonly RuBertIntentInterpreter _fastInterpreter;
-    private readonly LlamaCppIntentInterpreter _heavyInterpreter;
     private readonly LlamaCppTextGenerator _textGenerator;
     private readonly WindowsActionExecutor _executor;
     private readonly LocalCommandProcessor _localFallback;
@@ -18,14 +17,12 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
 
     public NeuralCommandProcessor(
         RuBertIntentInterpreter fastInterpreter,
-        LlamaCppIntentInterpreter heavyInterpreter,
         LlamaCppTextGenerator textGenerator,
         WindowsActionExecutor executor,
         LocalCommandProcessor localFallback,
         string appDirectory)
     {
         _fastInterpreter = fastInterpreter;
-        _heavyInterpreter = heavyInterpreter;
         _textGenerator = textGenerator;
         _executor = executor;
         _localFallback = localFallback;
@@ -53,47 +50,16 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
         {
             try
             {
-                var fastModelFailed = false;
-                try
-                {
-                    using (PerformanceLog.Measure("intent.rubert.plan_request"))
-                        plan = await _fastInterpreter.InterpretAsync(text, cancellationToken);
-                }
-                catch (Exception ex) when (IsModelException(ex))
-                {
-                    fastModelFailed = true;
-                    PerformanceLog.Event("llm.fast_intent.rejected", ex.Message);
-                    plan = new IntentPlan();
-                }
-
-                if (fastModelFailed)
-                {
-                    if (_textGenerator.Enabled)
-                        plan = await InterpretWithHeavyModelAsync(text, cancellationToken);
-                    else
-                        return new CommandResult(
-                            "Локальная модель понимания команд не смогла обработать фразу. Повтори её короче.",
-                            "RuBERT inference failed");
-                }
-                else if (_textGenerator.Enabled && RequiresHeavyFallback(plan))
-                {
-                    plan = await InterpretWithHeavyModelAsync(text, cancellationToken);
-                }
+                using (PerformanceLog.Measure("intent.rubert.plan_request"))
+                    plan = await _fastInterpreter.InterpretAsync(text, cancellationToken);
             }
             catch (Exception ex) when (IsModelException(ex))
             {
-                return new CommandResult(
-                    "Не удалось безопасно разобрать запрос. Повтори команду короче и назови действие точнее.",
-                    ex.Message);
+                // A classifier failure must not start a second, much larger model.
+                // Reuse the deterministic local parser and keep the command path cheap.
+                PerformanceLog.Event("intent.rubert.fallback_local", ex.Message);
+                return _localFallback.Process(text);
             }
-        }
-
-        if (plan.Actions.Count == 0)
-        {
-            if (!string.IsNullOrWhiteSpace(plan.Clarification))
-                return new CommandResult(plan.Clarification);
-
-            return _localFallback.Process(text);
         }
 
         var answers = new List<(int Position, string Text)>();
@@ -157,22 +123,6 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
             : string.Join(" ", answers.OrderBy(x => x.Position).Select(x => x.Text));
 
         return new CommandResult(answer, warnings.Count == 0 ? null : string.Join(" ", warnings));
-    }
-
-    private async Task<IntentPlan> InterpretWithHeavyModelAsync(
-        string text,
-        CancellationToken cancellationToken)
-    {
-        if (!_textGenerator.Enabled)
-            throw new InvalidOperationException("Большая модель отключена; не удалось безопасно обработать сложную команду.");
-
-        await _textGenerator.EnsureServerReadyAsync(cancellationToken);
-        using (PerformanceLog.Measure("llm.qwen.fallback_plan"))
-        {
-            var plan = await _heavyInterpreter.InterpretAsync(text, cancellationToken);
-            PerformanceLog.Event("llm.qwen.fallback_validated", $"actions={plan.Actions.Count}");
-            return plan;
-        }
     }
 
     private async Task<CommandResult> AnswerWithQwenAsync(
@@ -243,10 +193,6 @@ public sealed class NeuralCommandProcessor : ICommandProcessor
             return new CommandResult("Не удалось подготовить текст с помощью Qwen 4B.", ex.Message);
         }
     }
-
-    private static bool RequiresHeavyFallback(IntentPlan plan) =>
-        plan.Actions.Count == 0
-        || plan.Actions.Any(action => action.Action is "unknown" or "clarify");
 
     private static bool IsModelException(Exception exception) =>
         exception is HttpRequestException
