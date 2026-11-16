@@ -1,9 +1,6 @@
 name: Build full-feature laptop package
 
 on:
-  push:
-    branches:
-      - feature/lightweight-offline
   workflow_dispatch:
 
 permissions:
