@@ -5,6 +5,7 @@ public static class IntentPlanValidator
     private static readonly HashSet<string> Actions = new(StringComparer.Ordinal)
     {
         "system.get_time", "system.get_date", "system.get_datetime",
+        "system.get_status", "system.get_battery", "network.get_status", "window.get_active",
         "timer.start", "timer.cancel",
         "app.open", "url.open", "window.show_desktop",
         "audio.set_volume", "audio.adjust_volume", "audio.mute", "audio.unmute",
@@ -83,6 +84,10 @@ public static class IntentPlanValidator
             case "system.get_time":
             case "system.get_date":
             case "system.get_datetime":
+            case "system.get_status":
+            case "system.get_battery":
+            case "network.get_status":
+            case "window.get_active":
             case "window.show_desktop":
             case "audio.mute":
             case "audio.unmute":
@@ -188,6 +193,10 @@ public static class IntentPlanValidator
             "system.get_time" => HasAny("врем", "который час", "сколько времени", "часах", "на часах"),
             "system.get_date" => HasAny("дат", "число", "какое сегодня", "какая сегодня"),
             "system.get_datetime" => HasAny("дат", "врем", "который час"),
+            "system.get_status" => HasAny("систем", "компьют", "пк", "характерист", "ресурс", "оперативн", "памят", "загрузк", "свободн", "аптайм"),
+            "system.get_battery" => HasAny("батар", "аккумулятор", "заряд"),
+            "network.get_status" => HasAny("сет", "интернет", "wi-fi", "wifi", "вайфай", "подключен", "ip-адрес", "айпи"),
+            "window.get_active" => HasAny("активн", "переднем плане", "какое окно", "какая программа", "какое приложение", "фокус"),
             "timer.start" => HasAny("таймер", "отсч", "отсчет", "отсчёт"),
             "timer.cancel" => HasAny("таймер", "отсч", "отсчет", "отсчёт") && HasAny("отмен", "останов", "сброс"),
             "app.open" => HasAny("открой", "открыть", "запусти", "запустить", "включи", "вруби", "вруб", "покажи", "вызови", "дай")

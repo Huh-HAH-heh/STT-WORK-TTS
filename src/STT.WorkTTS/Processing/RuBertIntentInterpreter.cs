@@ -294,6 +294,10 @@ public sealed class RuBertIntentInterpreter : IDisposable
             case "system.get_time":
             case "system.get_date":
             case "system.get_datetime":
+            case "system.get_status":
+            case "system.get_battery":
+            case "network.get_status":
+            case "window.get_active":
             case "timer.cancel":
             case "window.show_desktop":
             case "audio.mute":

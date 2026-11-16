@@ -258,3 +258,28 @@
 {"text":"Открой мне браузер","label":"app.open"}
 {"text":"Запусти браузер","label":"app.open"}
 {"text":"Закрой приложение","label":"process.close"}
+{"text":"Покажи сведения о системе","label":"system.get_status"}
+{"text":"Покажи характеристики компьютера","label":"system.get_status"}
+{"text":"Проверь ресурсы компьютера","label":"system.get_status"}
+{"text":"Сколько оперативной памяти свободно","label":"system.get_status"}
+{"text":"Покажи загрузку оперативной памяти","label":"system.get_status"}
+{"text":"Сколько свободного места на системном диске","label":"system.get_status"}
+{"text":"Дай сводку по состоянию ПК","label":"system.get_status"}
+{"text":"Покажи состояние батареи","label":"system.get_battery"}
+{"text":"Сколько осталось заряда аккумулятора","label":"system.get_battery"}
+{"text":"Сколько процентов батареи осталось","label":"system.get_battery"}
+{"text":"Проверь заряд ноутбука","label":"system.get_battery"}
+{"text":"Ноутбук сейчас заряжается","label":"system.get_battery"}
+{"text":"Назови состояние питания компьютера","label":"system.get_battery"}
+{"text":"Покажи сетевые подключения","label":"network.get_status"}
+{"text":"Покажи параметры сети","label":"network.get_status"}
+{"text":"Какие IP адреса у компьютера","label":"network.get_status"}
+{"text":"Проверь состояние Wi Fi","label":"network.get_status"}
+{"text":"Есть ли подключение к сети","label":"network.get_status"}
+{"text":"Покажи активные сетевые интерфейсы","label":"network.get_status"}
+{"text":"Назови активное окно","label":"window.get_active"}
+{"text":"Какое окно сейчас активно","label":"window.get_active"}
+{"text":"Какая программа сейчас на переднем плане","label":"window.get_active"}
+{"text":"Покажи окно на переднем плане","label":"window.get_active"}
+{"text":"Что сейчас в фокусе","label":"window.get_active"}
+{"text":"Какое приложение сейчас активно","label":"window.get_active"}

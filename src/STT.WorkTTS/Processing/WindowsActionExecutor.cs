@@ -1,6 +1,10 @@
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
+using System.Text;
 using NAudio.CoreAudioApi;
 
 namespace STT.WorkTTS.Processing;
@@ -189,6 +193,10 @@ public sealed class WindowsActionExecutor : IDisposable
                 "system.get_date" => new CommandResult(FormatDate(DateTime.Now)),
                 "system.get_datetime" => new CommandResult(
                     $"{FormatDate(DateTime.Now)} Сейчас {DateTime.Now:HH:mm}."),
+                "system.get_status" => GetSystemStatus(),
+                "system.get_battery" => GetBatteryStatus(),
+                "network.get_status" => GetNetworkStatus(),
+                "window.get_active" => GetActiveWindowStatus(),
                 "timer.start" => StartTimer(args.DurationSeconds, args.Label),
                 "timer.cancel" => CancelTimer(args.TimerId),
                 "app.open" => OpenApplication(args.AppId),
@@ -347,6 +355,167 @@ public sealed class WindowsActionExecutor : IDisposable
             ? new CommandResult("Рабочая станция заблокирована.")
             : new CommandResult("Windows не разрешила заблокировать рабочую станцию.");
 
+    private static CommandResult GetSystemStatus()
+    {
+        var memory = new MemoryStatusEx
+        {
+            Length = (uint)Marshal.SizeOf<MemoryStatusEx>()
+        };
+
+        if (!GlobalMemoryStatusEx(ref memory))
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+
+        var usedMemory = memory.TotalPhysical - memory.AvailablePhysical;
+        var uptime = TimeSpan.FromMilliseconds(Environment.TickCount64);
+        var driveSummary = GetSystemDriveSummary();
+
+        var details =
+            $"Компьютер: {Environment.MachineName}.{Environment.NewLine}" +
+            $"ОС: {RuntimeInformation.OSDescription}.{Environment.NewLine}" +
+            $"Логических процессоров: {Environment.ProcessorCount}.{Environment.NewLine}" +
+            $"ОЗУ: занято {FormatBytes(usedMemory)} из {FormatBytes(memory.TotalPhysical)}, " +
+            $"свободно {FormatBytes(memory.AvailablePhysical)} ({memory.MemoryLoad}% занято).{Environment.NewLine}" +
+            $"Время работы: {FormatUptime(uptime)}.{driveSummary}";
+
+        return new CommandResult(details);
+    }
+
+    private static CommandResult GetBatteryStatus()
+    {
+        if (!GetSystemPowerStatus(out var status))
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+
+        if ((status.BatteryFlag & 0x80) != 0)
+            return new CommandResult("Windows сообщает, что батарея в этом устройстве не обнаружена. Компьютер, вероятно, работает от сети.");
+
+        var percent = status.BatteryLifePercent == 255
+            ? "уровень заряда неизвестен"
+            : $"заряд {status.BatteryLifePercent}%";
+
+        var charging = (status.BatteryFlag & 0x08) != 0 ? ", батарея заряжается" : string.Empty;
+        var power = status.ACLineStatus switch
+        {
+            0 => "питание от батареи",
+            1 => "подключено питание от сети",
+            _ => "источник питания не определён"
+        };
+
+        return new CommandResult($"Состояние питания: {power}; {percent}{charging}.");
+    }
+
+    private static CommandResult GetNetworkStatus()
+    {
+        try
+        {
+            var interfaces = NetworkInterface.GetAllNetworkInterfaces()
+                .Where(item => item.OperationalStatus == OperationalStatus.Up
+                    && item.NetworkInterfaceType is not NetworkInterfaceType.Loopback
+                    and not NetworkInterfaceType.Tunnel)
+                .Select(item =>
+                {
+                    var addresses = item.GetIPProperties().UnicastAddresses
+                        .Where(address => address.Address.AddressFamily == AddressFamily.InterNetwork
+                            && !IPAddress.IsLoopback(address.Address))
+                        .Select(address => address.Address.ToString())
+                        .Distinct(StringComparer.Ordinal)
+                        .ToArray();
+
+                    var kind = item.NetworkInterfaceType switch
+                    {
+                        NetworkInterfaceType.Wireless80211 => "Wi-Fi",
+                        NetworkInterfaceType.Ethernet
+                            or NetworkInterfaceType.FastEthernetFx
+                            or NetworkInterfaceType.FastEthernetT => "Ethernet",
+                        _ => item.NetworkInterfaceType.ToString()
+                    };
+
+                    return $"{item.Name} ({kind}): " +
+                        (addresses.Length == 0 ? "IPv4-адрес не назначен" : string.Join(", ", addresses));
+                })
+                .Take(6)
+                .ToArray();
+
+            if (interfaces.Length == 0)
+                return new CommandResult("Активные сетевые интерфейсы не обнаружены.");
+
+            var header = NetworkInterface.GetIsNetworkAvailable()
+                ? "Windows сообщает, что сетевое подключение доступно."
+                : "Windows не обнаружила активное сетевое подключение.";
+
+            return new CommandResult(
+                header + Environment.NewLine + string.Join(Environment.NewLine, interfaces));
+        }
+        catch (NetworkInformationException ex)
+        {
+            return new CommandResult("Не удалось получить сведения о сетевых интерфейсах.", ex.Message);
+        }
+    }
+
+    private static CommandResult GetActiveWindowStatus()
+    {
+        var handle = GetForegroundWindow();
+        if (handle == IntPtr.Zero)
+            return new CommandResult("Не удалось определить активное окно.");
+
+        var titleLength = Math.Clamp(GetWindowTextLength(handle), 0, 2047);
+        var titleBuffer = new StringBuilder(Math.Max(titleLength + 1, 2));
+        _ = GetWindowText(handle, titleBuffer, titleBuffer.Capacity);
+
+        _ = GetWindowThreadProcessId(handle, out var processId);
+        var processName = "неизвестный процесс";
+        if (processId > 0)
+        {
+            try
+            {
+                using var process = Process.GetProcessById((int)processId);
+                processName = process.ProcessName;
+            }
+            catch (ArgumentException)
+            {
+                processName = "процесс уже завершился";
+            }
+        }
+
+        var title = string.IsNullOrWhiteSpace(titleBuffer.ToString())
+            ? "без заголовка"
+            : titleBuffer.ToString();
+
+        return new CommandResult(
+            $"Активное окно: {title}.{Environment.NewLine}Процесс: {processName} (PID {processId}).");
+    }
+
+    private static string GetSystemDriveSummary()
+    {
+        try
+        {
+            var root = Path.GetPathRoot(Environment.SystemDirectory);
+            if (string.IsNullOrWhiteSpace(root))
+                return string.Empty;
+
+            var drive = new DriveInfo(root);
+            return !drive.IsReady
+                ? string.Empty
+                : $"{Environment.NewLine}Диск {root}: свободно {FormatBytes((ulong)drive.AvailableFreeSpace)} " +
+                    $"из {FormatBytes((ulong)drive.TotalSize)}.";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return string.Empty;
+        }
+    }
+
+    private static string FormatBytes(ulong bytes) =>
+        $"{bytes / (1024d * 1024d * 1024d):0.0} ГБ";
+
+    private static string FormatUptime(TimeSpan uptime)
+    {
+        if (uptime.TotalDays >= 1)
+            return $"{uptime.Days} дн. {uptime.Hours} ч. {uptime.Minutes} мин.";
+        if (uptime.TotalHours >= 1)
+            return $"{uptime.Hours} ч. {uptime.Minutes} мин.";
+        return $"{Math.Max(0, uptime.Minutes)} мин.";
+    }
+
     private static string FormatDate(DateTime value)
     {
         var months = new[]
@@ -366,6 +535,51 @@ public sealed class WindowsActionExecutor : IDisposable
         if (span.Seconds > 0) parts.Add($"{span.Seconds} сек.");
         return string.Join(" ", parts);
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MemoryStatusEx
+    {
+        public uint Length;
+        public uint MemoryLoad;
+        public ulong TotalPhysical;
+        public ulong AvailablePhysical;
+        public ulong TotalPageFile;
+        public ulong AvailablePageFile;
+        public ulong TotalVirtual;
+        public ulong AvailableVirtual;
+        public ulong AvailableExtendedVirtual;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct SystemPowerStatus
+    {
+        public byte ACLineStatus;
+        public byte BatteryFlag;
+        public byte BatteryLifePercent;
+        public byte SystemStatusFlag;
+        public uint BatteryLifeTime;
+        public uint BatteryFullLifeTime;
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GlobalMemoryStatusEx(ref MemoryStatusEx buffer);
+
+    [DllImport("kernel32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetSystemPowerStatus(out SystemPowerStatus status);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int GetWindowTextLength(IntPtr handle);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    private static extern int GetWindowText(IntPtr handle, StringBuilder text, int maxCount);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint GetWindowThreadProcessId(IntPtr handle, out uint processId);
 
     [DllImport("user32.dll", EntryPoint = "keybd_event")]
     private static extern void KeybdEvent(byte virtualKey, byte scanCode, uint flags, UIntPtr extraInfo);
