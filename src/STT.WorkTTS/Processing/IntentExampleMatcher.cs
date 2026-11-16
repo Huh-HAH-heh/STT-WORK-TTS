@@ -105,10 +105,11 @@ internal sealed class IntentExampleMatcher
         var text = utterance.ToLowerInvariant().Replace('ё', 'е');
         bool Has(params string[] terms) => terms.Any(text.Contains);
 
-        var hasPhoneContext = Has("телефон", "смартфон", "мобильн", "мобил", "докер", "docker", "контейнер");
+        var hasPhoneTarget = Has("для телефона", "с телефона", "на телефоне", "смартфон", "мобильн", "мобил");
+        var hasDockerContext = Has("докер", "docker", "контейнер");
         var hasAddressContext = Has("адрес", "ip", "айпи", "я и пи", "сайт", "ссылк", "порт", "доступ");
 
-        if (hasPhoneContext && hasAddressContext)
+        if ((hasPhoneTarget || hasDockerContext) && hasAddressContext)
         {
             label = "network.get_phone_access";
             return true;
@@ -118,7 +119,7 @@ internal sealed class IntentExampleMatcher
         var hasNetworkContext = Has("сет", "сеть", "ip", "айпи", "я и пи", "wi-fi", "wifi", "вайфай");
         var hasAddress = Has("адрес", "подключ", "ip", "айпи", "я и пи", "wi-fi", "wifi", "вайфай");
 
-        if (hasInterface || hasNetworkContext && hasAddress)
+        if (hasNetworkContext && (hasInterface || hasAddress))
         {
             label = "network.get_status";
             return true;
