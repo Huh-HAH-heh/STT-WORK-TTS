@@ -8,7 +8,7 @@ $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Push-Location $Root
 
 try {
-    $Python = Join-Path $Root ".build-venv\\Scripts\\python.exe"
+    $Python = Join-Path $Root ".build-venv\Scripts\python.exe"
     if ($Clean) {
         Remove-Item (Join-Path $Root ".build-venv") -Recurse -Force -ErrorAction SilentlyContinue
         Remove-Item (Join-Path $Root "build") -Recurse -Force -ErrorAction SilentlyContinue
@@ -29,15 +29,15 @@ try {
     & $Python -m pip install --disable-pip-version-check -e ".[build]"
     if ($LASTEXITCODE -ne 0) { throw "Project dependency installation failed." }
 
-    $ModelDir = Join-Path $Root "assets\\models\\vosk-model-small-ru-0.22"
-    $VoiceDir = Join-Path $Root "assets\\voices"
+    $ModelDir = Join-Path $Root "assets\models\vosk-model-small-ru-0.22"
+    $VoiceDir = Join-Path $Root "assets\voices"
     New-Item -ItemType Directory -Force -Path $ModelDir, $VoiceDir | Out-Null
 
-    if (-not (Test-Path (Join-Path $ModelDir "conf\\model.conf"))) {
-        $ModelZip = Join-Path $Root "assets\\vosk-model-small-ru-0.22.zip"
+    if (-not (Test-Path (Join-Path $ModelDir "conf\model.conf"))) {
+        $ModelZip = Join-Path $Root "assets\vosk-model-small-ru-0.22.zip"
         Write-Host "Downloading the Russian Vosk Small model (~45 MB)..."
         Invoke-WebRequest -Uri "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip" -OutFile $ModelZip
-        $TempModel = Join-Path $Root "assets\\models\\_vosk_extract"
+        $TempModel = Join-Path $Root "assets\models\_vosk_extract"
         Remove-Item $TempModel -Recurse -Force -ErrorAction SilentlyContinue
         Expand-Archive -Path $ModelZip -DestinationPath $TempModel -Force
         $ExtractedModel = Join-Path $TempModel "vosk-model-small-ru-0.22"
@@ -79,12 +79,12 @@ try {
 
     Write-Host "Building the portable application..."
     Remove-Item (Join-Path $Root "build") -Recurse -Force -ErrorAction SilentlyContinue
-    Remove-Item (Join-Path $Root "dist\\STTWorkTTS") -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item (Join-Path $Root "dist\STTWorkTTS") -Recurse -Force -ErrorAction SilentlyContinue
 
     & $Python -m PyInstaller --noconfirm --clean --onedir --name STTWorkTTS --paths src --collect-all vosk --collect-all piper --collect-all onnxruntime --collect-all _sounddevice_data run_app.py
     if ($LASTEXITCODE -ne 0) { throw "PyInstaller build failed." }
 
-    $PortableDir = Join-Path $Root "dist\\STTWorkTTS"
+    $PortableDir = Join-Path $Root "dist\STTWorkTTS"
     Copy-Item (Join-Path $Root "config.toml") $PortableDir -Force
     Copy-Item (Join-Path $Root "assets") (Join-Path $PortableDir "assets") -Recurse -Force
     Copy-Item (Join-Path $Root "Start.cmd") $PortableDir -Force
